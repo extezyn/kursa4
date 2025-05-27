@@ -1,0 +1,38 @@
+<variant
+    name="release"
+    package="com.financemanager.finance_manager"
+    minSdkVersion="21"
+    targetSdkVersion="35"
+    shrinking="true"
+    mergedManifest="C:\Users\Roma\Desktop\kursa4\build\app\intermediates\merged_manifest\release\processReleaseMainManifest\AndroidManifest.xml"
+    manifestMergeReport="C:\Users\Roma\Desktop\kursa4\build\app\outputs\logs\manifest-merger-release-report.txt"
+    proguardFiles="C:\Users\Roma\Desktop\kursa4\build\app\intermediates\default_proguard_files\global\proguard-android-optimize.txt-8.7.0;C:\Users\Roma\flutter\packages\flutter_tools\gradle\flutter_proguard_rules.pro;proguard-rules.pro"
+    partialResultsDir="C:\Users\Roma\Desktop\kursa4\build\app\intermediates\lint_vital_partial_results\release\lintVitalAnalyzeRelease\out">
+  <buildFeatures
+      coreLibraryDesugaring="true"
+      namespacing="REQUIRED"/>
+  <sourceProviders>
+    <sourceProvider
+        manifests="src\main\AndroidManifest.xml"
+        javaDirectories="src\main\java;src\release\java;src\main\kotlin;src\release\kotlin"
+        resDirectories="src\main\res;src\release\res"
+        assetsDirectories="src\main\assets;src\release\assets"/>
+  </sourceProviders>
+  <testSourceProviders>
+  </testSourceProviders>
+  <testFixturesSourceProviders>
+  </testFixturesSourceProviders>
+  <manifestPlaceholders>
+    <placeholder
+        name="applicationName"
+        value="android.app.Application" />
+  </manifestPlaceholders>
+  <artifact
+      classOutputs="C:\Users\Roma\Desktop\kursa4\build\app\intermediates\javac\release\compileReleaseJavaWithJavac\classes;C:\Users\Roma\Desktop\kursa4\build\app\tmp\kotlin-classes\release;C:\Users\Roma\Desktop\kursa4\build\app\kotlinToolingMetadata;C:\Users\Roma\Desktop\kursa4\build\app\intermediates\compile_and_runtime_not_namespaced_r_class_jar\release\processReleaseResources\R.jar"
+      type="MAIN"
+      applicationId="com.financemanager.finance_manager"
+      generatedSourceFolders="C:\Users\Roma\Desktop\kursa4\build\app\generated\ap_generated_sources\release\out"
+      generatedResourceFolders="C:\Users\Roma\Desktop\kursa4\build\app\generated\res\resValues\release"
+      desugaredMethodsFiles="C:\Users\Roma\.gradle\caches\8.10.2\transforms\9c7075274ef63a9900894a04596b6d9a\transformed\desugar_jdk_libs_configuration-2.0.4-desugar-lint.txt;C:\Users\Roma\.gradle\caches\8.10.2\transforms\a42955dd56d1f0e243559afb4fb93fc5\transformed\D8BackportedDesugaredMethods.txt">
+  </artifact>
+</variant>
