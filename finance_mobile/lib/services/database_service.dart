@@ -43,6 +43,14 @@ class DatabaseService {
     return maps.map((e) => Expense.fromMap(e)).toList();
   }
 
+  static Future<void> deleteExpense(String id) async {
+    await _db!.delete(
+      'expenses',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
   static Future<void> insertLoan(Loan loan) async {
     await _db!.insert('loans', {
       'id': loan.id,

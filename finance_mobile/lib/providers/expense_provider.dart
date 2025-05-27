@@ -17,4 +17,10 @@ class ExpenseProvider extends ChangeNotifier {
     _expenses.add(expense);
     notifyListeners();
   }
+
+  Future<void> deleteExpense(String id) async {
+    await DatabaseService.deleteExpense(id);
+    _expenses.removeWhere((expense) => expense.id == id);
+    notifyListeners();
+  }
 }

@@ -6,6 +6,7 @@ import '../widgets/pie_chart_widget.dart';
 import 'add_expense_screen.dart';
 import 'add_loan_screen.dart';
 import 'analytics_screen.dart';
+import 'settings_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -19,11 +20,20 @@ class HomeScreen extends StatelessWidget {
         title: const Text('Финансовый учёт'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SettingsScreen()),
+              );
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.bar_chart),
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => AnalyticsScreen()),
+                MaterialPageRoute(builder: (_) => const AnalyticsScreen()),
               );
             },
           ),
@@ -32,7 +42,7 @@ class HomeScreen extends StatelessWidget {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => AddLoanScreen()),
+                MaterialPageRoute(builder: (_) => const AddLoanScreen()),
               );
             },
           ),
@@ -51,7 +61,7 @@ class HomeScreen extends StatelessWidget {
         onPressed: () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => AddExpenseScreen()),
+            MaterialPageRoute(builder: (_) => const AddExpenseScreen()),
           );
         },
         child: const Icon(Icons.add),
