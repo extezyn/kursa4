@@ -8,6 +8,36 @@ class ExpenseList extends StatelessWidget {
   final List<Expense> expenses;
   const ExpenseList({super.key, required this.expenses});
 
+  Future<bool?> _confirmDelete(BuildContext context) {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Подтверждение'),
+        content: const Text('Вы уверены, что хотите удалить эту транзакцию?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Отмена'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Удалить'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _deleteExpense(BuildContext context, String id) {
+    Provider.of<ExpenseProvider>(context, listen: false).deleteExpense(id);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Транзакция удалена'),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final dateFormat = DateFormat('dd.MM.yyyy');
@@ -25,41 +55,19 @@ class ExpenseList extends StatelessWidget {
             child: const Icon(Icons.delete, color: Colors.white),
           ),
           direction: DismissDirection.endToStart,
-          onDismissed: (direction) {
-            Provider.of<ExpenseProvider>(context, listen: false)
-                .deleteExpense(expense.id);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Транзакция удалена'),
-                action: SnackBarAction(
-                  label: 'Ок',
-                  onPressed: () {},
-                ),
-              ),
-            );
-          },
-          confirmDismiss: (direction) async {
-            return await showDialog(
-              context: context,
-              builder: (context) => AlertDialog(
-                title: const Text('Подтверждение'),
-                content: const Text('Вы уверены, что хотите удалить эту транзакцию?'),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(false),
-                    child: const Text('Отмена'),
-                  ),
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(true),
-                    child: const Text('Удалить'),
-                  ),
-                ],
-              ),
-            );
-          },
+          onDismissed: (direction) => _deleteExpense(context, expense.id),
+          confirmDismiss: (direction) => _confirmDelete(context),
           child: ListTile(
             title: Text('${expense.category}: ${expense.amount.toStringAsFixed(2)} ₽'),
             subtitle: Text(dateFormat.format(expense.date)),
+            trailing: IconButton(
+              icon: const Icon(Icons.delete_outline),
+              onPressed: () async {
+                if (await _confirmDelete(context) == true) {
+                  _deleteExpense(context, expense.id);
+                }
+              },
+            ),
           ),
         );
       },
