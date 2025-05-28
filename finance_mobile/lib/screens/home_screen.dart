@@ -10,6 +10,9 @@ import 'analytics_screen.dart';
 import 'settings_screen.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:intl/intl.dart';
+import 'package:excel/excel.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -34,15 +37,55 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     super.dispose();
   }
 
-  void _exportTransactions(BuildContext context, List<dynamic> expenses) {
+  void _exportTransactions(BuildContext context, List<dynamic> expenses) async {
     final now = DateTime.now();
-    String csv = 'Дата,Категория,Сумма\n';
+    final dateStr = _dateFormat.format(now).replaceAll('.', '_');
     
+    // Создаем CSV
+    String csv = 'Дата,Категория,Сумма\n';
     for (var expense in expenses) {
       csv += '${_dateFormat.format(expense.date)},${expense.category},${expense.amount}\n';
     }
-
-    Share.share(csv, subject: 'Экспорт транзакций ${_dateFormat.format(now)}');
+    
+    // Создаем Excel
+    var excel = Excel.createExcel();
+    var sheet = excel['Транзакции'];
+    
+    // Добавляем заголовки
+    sheet.appendRow(['Дата', 'Категория', 'Сумма']);
+    
+    // Добавляем данные
+    for (var expense in expenses) {
+      sheet.appendRow([
+        _dateFormat.format(expense.date),
+        expense.category,
+        expense.amount
+      ]);
+    }
+    
+    // Сохраняем файлы
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      
+      // Сохраняем CSV
+      final csvPath = '${directory.path}/transactions_$dateStr.csv';
+      await File(csvPath).writeAsString(csv);
+      
+      // Сохраняем Excel
+      final excelPath = '${directory.path}/transactions_$dateStr.xlsx';
+      var excelFile = File(excelPath);
+      await excelFile.writeAsBytes(excel.encode()!);
+      
+      // Делимся файлами
+      await Share.shareXFiles(
+        [XFile(csvPath), XFile(excelPath)],
+        subject: 'Экспорт транзакций $dateStr'
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Ошибка при экспорте: $e'))
+      );
+    }
   }
 
   @override
