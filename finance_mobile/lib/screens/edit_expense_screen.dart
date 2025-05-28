@@ -2,18 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/expense_provider.dart';
 import '../models/expense.dart';
-import 'package:uuid/uuid.dart';
 
-class AddExpenseScreen extends StatefulWidget {
-  const AddExpenseScreen({super.key});
+class EditExpenseScreen extends StatefulWidget {
+  final Expense expense;
+  
+  const EditExpenseScreen({
+    super.key,
+    required this.expense,
+  });
+
   @override
-  State<AddExpenseScreen> createState() => _AddExpenseScreenState();
+  State<EditExpenseScreen> createState() => _EditExpenseScreenState();
 }
 
-class _AddExpenseScreenState extends State<AddExpenseScreen> {
-  final _amountController = TextEditingController();
-  String _category = 'Продукты';
-  bool _isIncome = false;
+class _EditExpenseScreenState extends State<EditExpenseScreen> {
+  late TextEditingController _amountController;
+  late String _category;
+  late bool _isIncome;
   String? _errorMessage;
 
   final Map<String, List<String>> _categories = {
@@ -81,7 +86,17 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     }
   }
 
-  void _saveExpense() {
+  @override
+  void initState() {
+    super.initState();
+    _amountController = TextEditingController(
+      text: widget.expense.amount.toString(),
+    );
+    _category = widget.expense.category;
+    _isIncome = widget.expense.isIncome;
+  }
+
+  void _updateExpense() {
     try {
       final amount = double.tryParse(_amountController.text);
       if (amount == null || amount <= 0) {
@@ -90,15 +105,17 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
         });
         return;
       }
-      final expense = Expense(
-        id: const Uuid().v4(),
+
+      final updatedExpense = Expense(
+        id: widget.expense.id,
         category: _category,
         amount: amount,
-        date: DateTime.now(),
+        date: widget.expense.date,
         isIncome: _isIncome,
       );
 
-      Provider.of<ExpenseProvider>(context, listen: false).addExpense(expense);
+      Provider.of<ExpenseProvider>(context, listen: false)
+          .updateExpense(updatedExpense);
       Navigator.pop(context);
     } catch (e) {
       setState(() {
@@ -111,7 +128,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isIncome ? 'Добавить доход' : 'Добавить расход'),
+        title: Text(_isIncome ? 'Редактировать доход' : 'Редактировать расход'),
         elevation: 0,
       ),
       body: SingleChildScrollView(
@@ -243,14 +260,14 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                   ),
                   const SizedBox(height: 32),
                   ElevatedButton(
-                    onPressed: _saveExpense,
+                    onPressed: _updateExpense,
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.all(16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text('Сохранить'),
+                    child: const Text('Сохранить изменения'),
                   ),
                 ],
               ),
@@ -266,4 +283,4 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     _amountController.dispose();
     super.dispose();
   }
-}
+} 

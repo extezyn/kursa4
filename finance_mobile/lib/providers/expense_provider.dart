@@ -23,4 +23,13 @@ class ExpenseProvider extends ChangeNotifier {
     _expenses.removeWhere((expense) => expense.id == id);
     notifyListeners();
   }
+
+  Future<void> updateExpense(Expense expense) async {
+    await DatabaseService.updateExpense(expense);
+    final index = _expenses.indexWhere((e) => e.id == expense.id);
+    if (index != -1) {
+      _expenses[index] = expense;
+      notifyListeners();
+    }
+  }
 }

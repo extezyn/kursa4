@@ -11,14 +11,15 @@ class DatabaseService {
     final path = join(await getDatabasesPath(), 'finance.db');
     _db = await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: (db, version) {
         db.execute('''
         CREATE TABLE expenses (
           id TEXT PRIMARY KEY,
           category TEXT,
           amount REAL,
-          date TEXT
+          date TEXT,
+          isIncome INTEGER DEFAULT 0
         );
       ''');
         db.execute('''
@@ -30,6 +31,11 @@ class DatabaseService {
           isAnnuity INTEGER
         );
       ''');
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          await db.execute('ALTER TABLE expenses ADD COLUMN isIncome INTEGER DEFAULT 0');
+        }
       },
     );
   }
@@ -48,6 +54,15 @@ class DatabaseService {
       'expenses',
       where: 'id = ?',
       whereArgs: [id],
+    );
+  }
+
+  static Future<void> updateExpense(Expense expense) async {
+    await _db!.update(
+      'expenses',
+      expense.toMap(),
+      where: 'id = ?',
+      whereArgs: [expense.id],
     );
   }
 

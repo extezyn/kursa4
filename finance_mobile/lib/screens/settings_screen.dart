@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -9,30 +10,33 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  ThemeMode _themeMode = ThemeMode.system;
-  String _selectedLanguage = 'Русский';
-  String _selectedCurrency = '₽';
+  String _version = '';
 
   @override
   void initState() {
     super.initState();
-    _loadSettings();
+    _loadAppVersion();
   }
 
-  Future<void> _loadSettings() async {
-    final prefs = await SharedPreferences.getInstance();
+  Future<void> _loadAppVersion() async {
+    final packageInfo = await PackageInfo.fromPlatform();
     setState(() {
-      _themeMode = ThemeMode.values[prefs.getInt('themeMode') ?? 0];
-      _selectedLanguage = prefs.getString('language') ?? 'Русский';
-      _selectedCurrency = prefs.getString('currency') ?? '₽';
+      _version = packageInfo.version;
     });
   }
 
-  Future<void> _saveSettings() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('themeMode', _themeMode.index);
-    await prefs.setString('language', _selectedLanguage);
-    await prefs.setString('currency', _selectedCurrency);
+  Future<void> _openPrivacyPolicy() async {
+    const url = 'https://example.com/privacy';
+    if (await canLaunch(url)) {
+      await launch(url);
+    }
+  }
+
+  Future<void> _openTermsOfService() async {
+    const url = 'https://example.com/terms';
+    if (await canLaunch(url)) {
+      await launch(url);
+    }
   }
 
   @override
@@ -43,141 +47,75 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
       body: ListView(
         children: [
-          ListTile(
-            leading: const Icon(Icons.color_lens),
-            title: const Text('Тема приложения'),
-            subtitle: Text(_themeMode == ThemeMode.system
-                ? 'Системная'
-                : _themeMode == ThemeMode.light
-                    ? 'Светлая'
-                    : 'Тёмная'),
-            onTap: () async {
-              final result = await showDialog<ThemeMode>(
-                context: context,
-                builder: (context) => SimpleDialog(
-                  title: const Text('Выберите тему'),
-                  children: [
-                    SimpleDialogOption(
-                      onPressed: () => Navigator.pop(context, ThemeMode.system),
-                      child: const Text('Системная'),
-                    ),
-                    SimpleDialogOption(
-                      onPressed: () => Navigator.pop(context, ThemeMode.light),
-                      child: const Text('Светлая'),
-                    ),
-                    SimpleDialogOption(
-                      onPressed: () => Navigator.pop(context, ThemeMode.dark),
-                      child: const Text('Тёмная'),
-                    ),
-                  ],
-                ),
-              );
-              if (result != null) {
-                setState(() {
-                  _themeMode = result;
-                });
-                await _saveSettings();
-              }
-            },
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              'О приложении',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
           ),
           ListTile(
-            leading: const Icon(Icons.language),
-            title: const Text('Язык'),
-            subtitle: Text(_selectedLanguage),
-            onTap: () async {
-              final result = await showDialog<String>(
-                context: context,
-                builder: (context) => SimpleDialog(
-                  title: const Text('Выберите язык'),
-                  children: [
-                    SimpleDialogOption(
-                      onPressed: () => Navigator.pop(context, 'Русский'),
-                      child: const Text('Русский'),
-                    ),
-                    SimpleDialogOption(
-                      onPressed: () => Navigator.pop(context, 'English'),
-                      child: const Text('English'),
-                    ),
-                  ],
-                ),
-              );
-              if (result != null) {
-                setState(() {
-                  _selectedLanguage = result;
-                });
-                await _saveSettings();
-              }
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.currency_ruble),
-            title: const Text('Валюта'),
-            subtitle: Text(_selectedCurrency),
-            onTap: () async {
-              final result = await showDialog<String>(
-                context: context,
-                builder: (context) => SimpleDialog(
-                  title: const Text('Выберите валюту'),
-                  children: [
-                    SimpleDialogOption(
-                      onPressed: () => Navigator.pop(context, '₽'),
-                      child: const Text('Рубль (₽)'),
-                    ),
-                    SimpleDialogOption(
-                      onPressed: () => Navigator.pop(context, '\$'),
-                      child: const Text('Доллар (\$)'),
-                    ),
-                    SimpleDialogOption(
-                      onPressed: () => Navigator.pop(context, '€'),
-                      child: const Text('Евро (€)'),
-                    ),
-                  ],
-                ),
-              );
-              if (result != null) {
-                setState(() {
-                  _selectedCurrency = result;
-                });
-                await _saveSettings();
-              }
-            },
+            leading: const Icon(Icons.info_outline),
+            title: const Text('Версия'),
+            subtitle: Text(_version),
           ),
           const Divider(),
-          ListTile(
-            leading: const Icon(Icons.backup),
-            title: const Text('Резервное копирование'),
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Функция будет доступна в следующей версии'),
-                ),
-              );
-            },
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              'Документы',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
           ),
           ListTile(
-            leading: const Icon(Icons.restore),
-            title: const Text('Восстановление данных'),
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Функция будет доступна в следующей версии'),
-                ),
-              );
-            },
+            leading: const Icon(Icons.privacy_tip_outlined),
+            title: const Text('Политика конфиденциальности'),
+            onTap: _openPrivacyPolicy,
+          ),
+          ListTile(
+            leading: const Icon(Icons.description_outlined),
+            title: const Text('Условия использования'),
+            onTap: _openTermsOfService,
           ),
           const Divider(),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              'Разработка',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+          ),
           ListTile(
-            leading: const Icon(Icons.info),
-            title: const Text('О приложении'),
+            leading: const Icon(Icons.bug_report_outlined),
+            title: const Text('Сообщить о проблеме'),
             onTap: () {
-              showAboutDialog(
-                context: context,
-                applicationName: 'Финансовый учёт',
-                applicationVersion: '1.0.0',
-                applicationLegalese: '© 2024 Finance Mobile',
-              );
+              // Добавить функционал для отправки отчета о проблеме
             },
           ),
+          ListTile(
+            leading: const Icon(Icons.star_outline),
+            title: const Text('Оценить приложение'),
+            onTap: () {
+              // Добавить функционал для оценки приложения
+            },
+          ),
+          const SizedBox(height: 24),
+          Center(
+            child: Text(
+              '© 2025 Finance App',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
         ],
       ),
     );
