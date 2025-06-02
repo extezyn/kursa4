@@ -11,58 +11,64 @@ class CategoryProvider with ChangeNotifier {
   final AchievementProvider _achievementProvider;
 
   CategoryProvider(this._achievementProvider) {
-    _initializeDefaultCategories();
+    _initializeCategories();
   }
 
   List<CategoryModel> get categories => List.unmodifiable(_categories);
   List<CategoryModel> get expenseCategories => _categories.where((c) => !c.isIncome).toList();
   List<CategoryModel> get incomeCategories => _categories.where((c) => c.isIncome).toList();
 
-  Future<void> _initializeDefaultCategories() async {
-    final defaultCategories = [
-      // Категории расходов
-      CategoryModel(
-        id: _uuid.v4(),
-        name: 'Продукты',
-        isIncome: false,
-      ),
-      CategoryModel(
-        id: _uuid.v4(),
-        name: 'Транспорт',
-        isIncome: false,
-      ),
-      CategoryModel(
-        id: _uuid.v4(),
-        name: 'Развлечения',
-        isIncome: false,
-      ),
-      CategoryModel(
-        id: _uuid.v4(),
-        name: 'Здоровье',
-        isIncome: false,
-      ),
-      CategoryModel(
-        id: _uuid.v4(),
-        name: 'Коммунальные платежи',
-        isIncome: false,
-      ),
-      // Категории доходов
-      CategoryModel(
-        id: _uuid.v4(),
-        name: 'Зарплата',
-        isIncome: true,
-      ),
-      CategoryModel(
-        id: _uuid.v4(),
-        name: 'Подработка',
-        isIncome: true,
-      ),
-    ];
-
-    for (var category in defaultCategories) {
-      await DatabaseService.insertCategory(category);
-    }
+  Future<void> _initializeCategories() async {
+    // Сначала загружаем существующие категории
     await loadCategories();
+
+    // Если категорий нет, добавляем дефолтные
+    if (_categories.isEmpty) {
+      final defaultCategories = [
+        // Категории расходов
+        CategoryModel(
+          id: _uuid.v4(),
+          name: 'Продукты',
+          isIncome: false,
+        ),
+        CategoryModel(
+          id: _uuid.v4(),
+          name: 'Транспорт',
+          isIncome: false,
+        ),
+        CategoryModel(
+          id: _uuid.v4(),
+          name: 'Развлечения',
+          isIncome: false,
+        ),
+        CategoryModel(
+          id: _uuid.v4(),
+          name: 'Здоровье',
+          isIncome: false,
+        ),
+        CategoryModel(
+          id: _uuid.v4(),
+          name: 'Коммунальные платежи',
+          isIncome: false,
+        ),
+        // Категории доходов
+        CategoryModel(
+          id: _uuid.v4(),
+          name: 'Зарплата',
+          isIncome: true,
+        ),
+        CategoryModel(
+          id: _uuid.v4(),
+          name: 'Подработка',
+          isIncome: true,
+        ),
+      ];
+
+      for (var category in defaultCategories) {
+        await DatabaseService.insertCategory(category);
+      }
+      await loadCategories();
+    }
   }
 
   CategoryModel? getCategoryById(String id) {
@@ -83,6 +89,11 @@ class CategoryProvider with ChangeNotifier {
   }
 
   Future<void> addCategory(CategoryModel category) async {
+    // Проверяем, не существует ли уже категория с таким именем
+    if (_categories.any((c) => c.name.toLowerCase() == category.name.toLowerCase() && c.isIncome == category.isIncome)) {
+      return;
+    }
+    
     await DatabaseService.insertCategory(category);
     await loadCategories();
     
