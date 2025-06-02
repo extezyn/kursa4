@@ -106,6 +106,13 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
         return;
       }
 
+      if (amount > 999999999) {
+        setState(() {
+          _errorMessage = 'Сумма не может превышать 999,999,999';
+        });
+        return;
+      }
+
       final updatedExpense = Expense(
         id: widget.expense.id,
         category: _category,

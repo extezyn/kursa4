@@ -90,6 +90,14 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
         });
         return;
       }
+      
+      if (amount > 999999999) {
+        setState(() {
+          _errorMessage = 'Сумма не может превышать 999,999,999';
+        });
+        return;
+      }
+
       final expense = Expense(
         id: const Uuid().v4(),
         category: _category,

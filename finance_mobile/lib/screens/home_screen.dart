@@ -4,6 +4,7 @@ import '../providers/expense_provider.dart';
 import '../widgets/expense_list.dart';
 import '../widgets/pie_chart_widget.dart';
 import '../widgets/budget_widget.dart';
+import '../widgets/drawer_menu.dart';
 import 'add_expense_screen.dart';
 import 'add_loan_screen.dart';
 import 'analytics_screen.dart';
@@ -93,6 +94,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     final provider = Provider.of<ExpenseProvider>(context);
 
     return Scaffold(
+      drawer: const DrawerMenu(),
       appBar: AppBar(
         title: const Text('Финансовый учёт'),
         bottom: TabBar(

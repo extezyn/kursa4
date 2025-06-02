@@ -19,6 +19,7 @@ class _BudgetWidgetState extends State<BudgetWidget> {
   void initState() {
     super.initState();
     _loadBudgetSettings();
+    _budgetController.text = _monthlyBudget.toString();
   }
 
   @override
@@ -32,10 +33,21 @@ class _BudgetWidgetState extends State<BudgetWidget> {
     setState(() {
       _monthlyBudget = prefs.getDouble('monthlyBudget') ?? 0;
       _isBudgetEnabled = prefs.getBool('isBudgetEnabled') ?? false;
+      _budgetController.text = _monthlyBudget.toString();
     });
   }
 
   Future<void> _saveBudget(double budget) async {
+    if (budget < 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Бюджет не может быть отрицательным'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+    
     final prefs = await SharedPreferences.getInstance();
     await prefs.setDouble('monthlyBudget', budget);
     setState(() {
@@ -53,123 +65,158 @@ class _BudgetWidgetState extends State<BudgetWidget> {
 
   double _calculateMonthlyExpenses() {
     final now = DateTime.now();
+    final monthlyExpenses = widget.expenses
+        .where((expense) =>
+            !expense.isIncome &&
+            expense.date.year == now.year && 
+            expense.date.month == now.month)
+        .fold(0.0, (sum, expense) => sum + expense.amount);
+    return monthlyExpenses;
+  }
+
+  double _calculateMonthlyIncome() {
+    final now = DateTime.now();
     return widget.expenses
         .where((expense) =>
-            expense.date.year == now.year && expense.date.month == now.month)
-        .fold(0, (sum, expense) => sum + expense.amount);
+            expense.isIncome &&
+            expense.date.year == now.year && 
+            expense.date.month == now.month)
+        .fold(0.0, (sum, expense) => sum + expense.amount);
   }
 
   @override
   Widget build(BuildContext context) {
     final monthlyExpenses = _calculateMonthlyExpenses();
+    final monthlyIncome = _calculateMonthlyIncome();
     final remaining = _monthlyBudget - monthlyExpenses;
     final progress = _monthlyBudget > 0 ? monthlyExpenses / _monthlyBudget : 0.0;
 
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SwitchListTile(
-            title: const Text('Включить бюджет'),
-            value: _isBudgetEnabled,
-            onChanged: _toggleBudget,
-          ),
-          if (_isBudgetEnabled) ...[
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  children: [
-                    Text(
-                      'Месячный бюджет',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '${_monthlyBudget.toStringAsFixed(2)} ₽',
-                      style: Theme.of(context).textTheme.headlineMedium,
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Месячный бюджет',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      Switch(
+                        value: _isBudgetEnabled,
+                        onChanged: _toggleBudget,
+                      ),
+                    ],
+                  ),
+                  if (_isBudgetEnabled) ...[
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: _budgetController,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      decoration: const InputDecoration(
+                        labelText: 'Установить бюджет',
+                        prefixIcon: Icon(Icons.currency_ruble),
+                        border: OutlineInputBorder(),
+                        hintText: 'Введите сумму бюджета',
+                      ),
+                      onChanged: (value) {
+                        if (value.isEmpty) {
+                          _saveBudget(0);
+                          return;
+                        }
+                        final budget = double.tryParse(value);
+                        if (budget != null) {
+                          _saveBudget(budget);
+                        }
+                      },
                     ),
                     const SizedBox(height: 16),
                     LinearProgressIndicator(
                       value: progress.clamp(0.0, 1.0),
-                      backgroundColor: Colors.grey[200],
+                      backgroundColor: Theme.of(context).colorScheme.primaryContainer,
                       valueColor: AlwaysStoppedAnimation<Color>(
-                        progress >= 1 ? Colors.red : Colors.green,
+                        progress >= 1.0 ? Colors.red : Colors.green,
                       ),
                     ),
                     const SizedBox(height: 16),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('Потрачено'),
-                            Text(
-                              '${monthlyExpenses.toStringAsFixed(2)} ₽',
-                              style: TextStyle(
-                                color: progress >= 1 ? Colors.red : Colors.green,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
+                        Text(
+                          'Потрачено: ${monthlyExpenses.toStringAsFixed(2)} ₽',
+                          style: Theme.of(context).textTheme.bodyLarge,
                         ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            const Text('Осталось'),
-                            Text(
-                              '${remaining.toStringAsFixed(2)} ₽',
-                              style: TextStyle(
-                                color: remaining < 0 ? Colors.red : Colors.green,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
+                        Text(
+                          'Осталось: ${remaining.toStringAsFixed(2)} ₽',
+                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            color: remaining < 0 ? Colors.red : Colors.green,
+                          ),
                         ),
                       ],
                     ),
                   ],
-                ),
+                ],
               ),
             ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () {
-                _budgetController.text = _monthlyBudget.toString();
-                showDialog(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Text('Установить бюджет'),
-                    content: TextField(
-                      controller: _budgetController,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Месячный бюджет',
-                        suffixText: '₽',
+          ),
+          const SizedBox(height: 16),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Статистика за месяц',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Доходы:',
+                            style: Theme.of(context).textTheme.bodyLarge,
+                          ),
+                          Text(
+                            '${monthlyIncome.toStringAsFixed(2)} ₽',
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              color: Colors.green,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('Отмена'),
-                      ),
-                      TextButton(
-                        onPressed: () {
-                          final budget = double.tryParse(_budgetController.text) ?? 0;
-                          _saveBudget(budget);
-                          Navigator.pop(context);
-                        },
-                        child: const Text('Сохранить'),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            'Расходы:',
+                            style: Theme.of(context).textTheme.bodyLarge,
+                          ),
+                          Text(
+                            '${monthlyExpenses.toStringAsFixed(2)} ₽',
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              color: Colors.red,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                );
-              },
-              child: const Text('Установить бюджет'),
+                ],
+              ),
             ),
-          ],
+          ),
         ],
       ),
     );
