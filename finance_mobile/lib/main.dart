@@ -3,19 +3,58 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/home_screen.dart';
 import 'screens/lock_screen.dart';
+import 'screens/categories_screen.dart';
+import 'screens/achievements_screen.dart';
+import 'screens/settings_screen.dart';
 import 'providers/expense_provider.dart';
 import 'providers/loan_provider.dart';
 import 'providers/category_provider.dart';
 import 'providers/achievement_provider.dart';
-import 'providers/reminder_provider.dart';
+import 'providers/theme_provider.dart';
 import 'services/database_service.dart';
 import 'routes.dart';
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await DatabaseService.initDB();
 
-  runApp(const MyApp());
+  try {
+    // Инициализируем базу данных
+    await DatabaseService.initDatabase();
+    
+    runApp(const MyApp());
+  } catch (e) {
+    debugPrint('Ошибка инициализации: $e');
+    // Показываем экран ошибки
+    runApp(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.error_outline,
+                  color: Colors.red,
+                  size: 48,
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Ошибка запуска приложения',
+                  style: TextStyle(fontSize: 18),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  e.toString(),
+                  style: const TextStyle(fontSize: 14, color: Colors.grey),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -25,77 +64,31 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(
-          create: (_) => AchievementProvider(),
-        ),
-        ChangeNotifierProvider(
-          create: (context) => CategoryProvider(
-            Provider.of<AchievementProvider>(context, listen: false),
-          )..loadCategories(),
-        ),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => AchievementProvider()),
+        ChangeNotifierProvider(create: (_) => CategoryProvider()),
         ChangeNotifierProvider(
           create: (context) => ExpenseProvider(
             Provider.of<CategoryProvider>(context, listen: false),
             Provider.of<AchievementProvider>(context, listen: false),
-          )..loadExpenses(),
+          ),
         ),
-        ChangeNotifierProvider(
-          create: (_) => LoanProvider()..loadLoans(),
-        ),
-        ChangeNotifierProvider(
-          create: (_) => ReminderProvider(),
-        ),
+        ChangeNotifierProvider(create: (_) => LoanProvider()),
       ],
-      child: MaterialApp(
-        title: 'Финансовый учёт',
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: Colors.indigo,
-            brightness: Brightness.light,
-          ),
-          useMaterial3: true,
-          appBarTheme: const AppBarTheme(
-            centerTitle: true,
-            elevation: 0,
-          ),
-          cardTheme: CardTheme(
-            elevation: 2,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-          ),
-          inputDecorationTheme: InputDecorationTheme(
-            filled: true,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        ),
-        darkTheme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: Colors.indigo,
-            brightness: Brightness.dark,
-          ),
-          useMaterial3: true,
-          appBarTheme: const AppBarTheme(
-            centerTitle: true,
-            elevation: 0,
-          ),
-          cardTheme: CardTheme(
-            elevation: 2,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-          ),
-          inputDecorationTheme: InputDecorationTheme(
-            filled: true,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        ),
-        routes: Routes.getRoutes(),
-        initialRoute: Routes.home,
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, child) {
+          return MaterialApp(
+            title: 'Финансовый менеджер',
+            theme: themeProvider.theme,
+            home: const AuthenticationWrapper(),
+            routes: {
+              '/categories': (context) => const CategoriesScreen(),
+              '/achievements': (context) => const AchievementsScreen(),
+              '/settings': (context) => const SettingsScreen(),
+            },
+            debugShowCheckedModeBanner: false,
+          );
+        },
       ),
     );
   }
@@ -112,6 +105,7 @@ class _AuthenticationWrapperState extends State<AuthenticationWrapper> {
   bool _isLoading = true;
   bool _requiresAuth = false;
   bool _isAuthenticated = false;
+  String? _error;
 
   @override
   void initState() {
@@ -120,15 +114,33 @@ class _AuthenticationWrapperState extends State<AuthenticationWrapper> {
   }
 
   Future<void> _checkAuthenticationStatus() async {
-    final prefs = await SharedPreferences.getInstance();
-    final hasPassword = prefs.getString('app_password') != null;
-    final isAuthenticated = prefs.getBool('is_authenticated') ?? false;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final hasPin = prefs.getString('pin') != null;
+      final isBiometricEnabled = prefs.getBool('isBiometricEnabled') ?? false;
+      final isAuthenticated = prefs.getBool('is_authenticated') ?? false;
 
-    setState(() {
-      _requiresAuth = hasPassword;
-      _isAuthenticated = isAuthenticated;
-      _isLoading = false;
-    });
+      if (mounted) {
+        setState(() {
+          _requiresAuth = hasPin || isBiometricEnabled;
+          _isAuthenticated = isAuthenticated;
+          _isLoading = false;
+        });
+      }
+
+      // Проверяем достижение регулярного использования
+      if (!_isLoading && mounted) {
+        Provider.of<AchievementProvider>(context, listen: false)
+            .checkRegularUserAchievement();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   @override
@@ -137,6 +149,45 @@ class _AuthenticationWrapperState extends State<AuthenticationWrapper> {
       return const Scaffold(
         body: Center(
           child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    if (_error != null) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.error_outline,
+                color: Colors.red,
+                size: 48,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Ошибка инициализации',
+                style: TextStyle(fontSize: 18),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _error!,
+                style: const TextStyle(fontSize: 14, color: Colors.grey),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    _error = null;
+                    _isLoading = true;
+                  });
+                  _checkAuthenticationStatus();
+                },
+                child: const Text('Повторить'),
+              ),
+            ],
+          ),
         ),
       );
     }

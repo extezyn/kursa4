@@ -1,24 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../models/achievement.dart';
 import '../providers/achievement_provider.dart';
-import '../utils/achievement_icons.dart';
+import '../models/achievement.dart';
 
 class AchievementsScreen extends StatelessWidget {
   const AchievementsScreen({Key? key}) : super(key: key);
 
-  IconData _getIconData(String iconPath) {
-    switch (iconPath) {
-      case 'assets/icons/achievements/first_steps.png':
-        return AchievementIcons.firstSteps;
-      case 'assets/icons/achievements/budget_master.png':
-        return AchievementIcons.budgetMaster;
-      case 'assets/icons/achievements/savings.png':
-        return AchievementIcons.savings;
-      case 'assets/icons/achievements/investor.png':
-        return AchievementIcons.investor;
-      case 'assets/icons/achievements/expert.png':
-        return AchievementIcons.expert;
+  IconData _getIconData(String iconName) {
+    switch (iconName) {
+      case 'star':
+        return Icons.star;
+      case 'savings':
+        return Icons.savings;
+      case 'category':
+        return Icons.category;
+      case 'money':
+        return Icons.money;
+      case 'calendar':
+        return Icons.calendar_today;
       default:
         return Icons.emoji_events;
     }
@@ -33,109 +32,52 @@ class AchievementsScreen extends StatelessWidget {
       body: Consumer<AchievementProvider>(
         builder: (context, provider, child) {
           final achievements = provider.achievements;
-          return GridView.builder(
-            padding: const EdgeInsets.all(16),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              childAspectRatio: 0.8,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-            ),
+          
+          if (achievements.isEmpty) {
+            return const Center(
+              child: Text('Нет доступных достижений'),
+            );
+          }
+
+          return ListView.builder(
             itemCount: achievements.length,
             itemBuilder: (context, index) {
               final achievement = achievements[index];
               return Card(
-                child: InkWell(
-                  onTap: () {
-                    showDialog(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: Text(achievement.name),
-                        content: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              _getIconData(achievement.icon),
-                              size: 64,
-                              color: achievement.isUnlocked ? Theme.of(context).primaryColor : Colors.grey,
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              achievement.description,
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 8),
-                            LinearProgressIndicator(
-                              value: achievement.progress / achievement.targetValue,
-                              backgroundColor: Colors.grey[300],
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                achievement.isUnlocked ? Colors.green : Theme.of(context).primaryColor,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${(achievement.progress / achievement.targetValue * 100).toStringAsFixed(0)}%',
-                              style: TextStyle(
-                                color: achievement.isUnlocked ? Colors.green : null,
-                                fontWeight: achievement.isUnlocked ? FontWeight.bold : null,
-                              ),
-                            ),
-                          ],
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: const Text('Закрыть'),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            Icon(
-                              _getIconData(achievement.icon),
-                              size: 48,
-                              color: achievement.isUnlocked ? Theme.of(context).primaryColor : Colors.grey,
-                            ),
-                            if (achievement.isUnlocked)
-                              const Positioned(
-                                right: -10,
-                                top: -10,
-                                child: Icon(
-                                  Icons.check_circle,
-                                  color: Colors.green,
-                                  size: 24,
-                                ),
-                              ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          achievement.name,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: achievement.isUnlocked ? null : Colors.grey,
-                            fontWeight: achievement.isUnlocked ? FontWeight.bold : null,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        LinearProgressIndicator(
-                          value: achievement.progress / achievement.targetValue,
-                          backgroundColor: Colors.grey[300],
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            achievement.isUnlocked ? Colors.green : Theme.of(context).primaryColor,
-                          ),
-                        ),
-                      ],
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: ListTile(
+                  leading: Icon(
+                    _getIconData(achievement.icon),
+                    color: achievement.isUnlocked ? Colors.amber : Colors.grey,
+                    size: 32,
+                  ),
+                  title: Text(
+                    achievement.name,
+                    style: TextStyle(
+                      fontWeight: achievement.isUnlocked ? FontWeight.bold : FontWeight.normal,
                     ),
                   ),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(achievement.description),
+                      const SizedBox(height: 4),
+                      LinearProgressIndicator(
+                        value: achievement.progress / achievement.targetValue,
+                        backgroundColor: Colors.grey[200],
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          achievement.isUnlocked ? Colors.green : Colors.blue,
+                        ),
+                      ),
+                      Text(
+                        '${achievement.progress.toInt()}/${achievement.targetValue.toInt()}',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                  trailing: achievement.isUnlocked
+                      ? const Icon(Icons.check_circle, color: Colors.green)
+                      : const Icon(Icons.lock_outline, color: Colors.grey),
                 ),
               );
             },

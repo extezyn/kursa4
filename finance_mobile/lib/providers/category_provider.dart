@@ -1,16 +1,11 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import '../models/category.dart';
-import 'package:uuid/uuid.dart';
 import '../services/database_service.dart';
-import '../providers/achievement_provider.dart';
 
 class CategoryProvider with ChangeNotifier {
   List<CategoryModel> _categories = [];
-  final _uuid = const Uuid();
-  final AchievementProvider _achievementProvider;
 
-  CategoryProvider(this._achievementProvider) {
+  CategoryProvider() {
     _initializeCategories();
   }
 
@@ -19,55 +14,9 @@ class CategoryProvider with ChangeNotifier {
   List<CategoryModel> get incomeCategories => _categories.where((c) => c.isIncome).toList();
 
   Future<void> _initializeCategories() async {
-    // Сначала загружаем существующие категории
     await loadCategories();
-
-    // Если категорий нет, добавляем дефолтные
     if (_categories.isEmpty) {
-      final defaultCategories = [
-        // Категории расходов
-        CategoryModel(
-          id: _uuid.v4(),
-          name: 'Продукты',
-          isIncome: false,
-        ),
-        CategoryModel(
-          id: _uuid.v4(),
-          name: 'Транспорт',
-          isIncome: false,
-        ),
-        CategoryModel(
-          id: _uuid.v4(),
-          name: 'Развлечения',
-          isIncome: false,
-        ),
-        CategoryModel(
-          id: _uuid.v4(),
-          name: 'Здоровье',
-          isIncome: false,
-        ),
-        CategoryModel(
-          id: _uuid.v4(),
-          name: 'Коммунальные платежи',
-          isIncome: false,
-        ),
-        // Категории доходов
-        CategoryModel(
-          id: _uuid.v4(),
-          name: 'Зарплата',
-          isIncome: true,
-        ),
-        CategoryModel(
-          id: _uuid.v4(),
-          name: 'Подработка',
-          isIncome: true,
-        ),
-      ];
-
-      for (var category in defaultCategories) {
-        await DatabaseService.insertCategory(category);
-      }
-      await loadCategories();
+      await initializeDefaultCategories();
     }
   }
 
@@ -89,26 +38,62 @@ class CategoryProvider with ChangeNotifier {
   }
 
   Future<void> addCategory(CategoryModel category) async {
-    // Проверяем, не существует ли уже категория с таким именем
-    if (_categories.any((c) => c.name.toLowerCase() == category.name.toLowerCase() && c.isIncome == category.isIncome)) {
-      return;
-    }
-    
     await DatabaseService.insertCategory(category);
-    await loadCategories();
-    
-    // Проверяем достижение "Бюджетный мастер"
-    final expenseCategoriesCount = expenseCategories.length;
-    await _achievementProvider.checkCategoryAchievements(expenseCategoriesCount);
-  }
-
-  Future<void> updateCategory(CategoryModel category) async {
-    await DatabaseService.updateCategory(category);
     await loadCategories();
   }
 
   Future<void> deleteCategory(String id) async {
-    await DatabaseService.deleteCategory(id);
+    final db = await DatabaseService.database;
+    await db.delete(
+      'categories',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
     await loadCategories();
+  }
+
+  Future<void> initializeDefaultCategories() async {
+    if (_categories.isEmpty) {
+      final defaultCategories = [
+        CategoryModel(
+          id: '1',
+          name: 'Продукты',
+          icon: 'shopping_cart',
+          color: '#4CAF50',
+        ),
+        CategoryModel(
+          id: '2',
+          name: 'Транспорт',
+          icon: 'directions_car',
+          color: '#2196F3',
+        ),
+        CategoryModel(
+          id: '3',
+          name: 'Развлечения',
+          icon: 'movie',
+          color: '#9C27B0',
+        ),
+        CategoryModel(
+          id: '4',
+          name: 'Зарплата',
+          icon: 'work',
+          color: '#4CAF50',
+          isIncome: true,
+        ),
+        CategoryModel(
+          id: '5',
+          name: 'Фриланс',
+          icon: 'computer',
+          color: '#2196F3',
+          isIncome: true,
+        ),
+      ];
+
+      for (var category in defaultCategories) {
+        await DatabaseService.insertCategory(category);
+      }
+
+      await loadCategories();
+    }
   }
 } 

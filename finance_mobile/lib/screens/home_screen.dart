@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/expense_provider.dart';
+import '../providers/category_provider.dart';
 import '../widgets/expense_list.dart';
 import '../widgets/pie_chart_widget.dart';
 import '../widgets/budget_widget.dart';
 import '../widgets/drawer_menu.dart';
+import '../services/export_service.dart';
 import 'add_expense_screen.dart';
 import 'add_loan_screen.dart';
 import 'analytics_screen.dart';
@@ -38,54 +40,24 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     super.dispose();
   }
 
-  void _exportTransactions(BuildContext context, List<dynamic> expenses) async {
-    final now = DateTime.now();
-    final dateStr = _dateFormat.format(now).replaceAll('.', '_');
-    
-    // Создаем CSV
-    String csv = 'Дата,Категория,Сумма\n';
-    for (var expense in expenses) {
-      csv += '${_dateFormat.format(expense.date)},${expense.category},${expense.amount}\n';
-    }
-    
-    // Создаем Excel
-    var excel = Excel.createExcel();
-    var sheet = excel['Транзакции'];
-    
-    // Добавляем заголовки
-    sheet.appendRow(['Дата', 'Категория', 'Сумма']);
-    
-    // Добавляем данные
-    for (var expense in expenses) {
-      sheet.appendRow([
-        _dateFormat.format(expense.date),
-        expense.category,
-        expense.amount
-      ]);
-    }
-    
-    // Сохраняем файлы
+  void _exportTransactions(BuildContext context) async {
     try {
-      final directory = await getApplicationDocumentsDirectory();
+      final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
+      final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
       
-      // Сохраняем CSV
-      final csvPath = '${directory.path}/transactions_$dateStr.csv';
-      await File(csvPath).writeAsString(csv);
-      
-      // Сохраняем Excel
-      final excelPath = '${directory.path}/transactions_$dateStr.xlsx';
-      var excelFile = File(excelPath);
-      await excelFile.writeAsBytes(excel.encode()!);
-      
-      // Делимся файлами
-      await Share.shareXFiles(
-        [XFile(csvPath), XFile(excelPath)],
-        subject: 'Экспорт транзакций $dateStr'
+      await ExportService.exportToCSV(
+        expenseProvider.expenses,
+        categoryProvider.categories,
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Ошибка при экспорте: $e'))
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Ошибка при экспорте: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
     }
   }
 
@@ -108,7 +80,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         actions: [
           IconButton(
             icon: const Icon(Icons.share),
-            onPressed: () => _exportTransactions(context, provider.expenses),
+            onPressed: () => _exportTransactions(context),
           ),
           IconButton(
             icon: const Icon(Icons.bar_chart),
@@ -143,7 +115,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           // Вкладка транзакций
           ExpenseList(expenses: provider.expenses),
           // Вкладка бюджета
-          BudgetWidget(expenses: provider.expenses),
+          const BudgetWidget(),
         ],
       ),
       floatingActionButton: FloatingActionButton(

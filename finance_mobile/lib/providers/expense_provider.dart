@@ -12,7 +12,9 @@ class ExpenseProvider with ChangeNotifier {
   final CategoryProvider _categoryProvider;
   final AchievementProvider _achievementProvider;
 
-  ExpenseProvider(this._categoryProvider, this._achievementProvider);
+  ExpenseProvider(this._categoryProvider, this._achievementProvider) {
+    loadExpenses();
+  }
 
   // Геттеры для доступа к фильтрам
   DateTime? get startDate => _startDate;
@@ -36,15 +38,11 @@ class ExpenseProvider with ChangeNotifier {
     }
 
     if (_selectedCategory != null) {
-      final category = _categoryProvider.getCategoryById(_selectedCategory!);
-      if (category != null) {
-        filteredExpenses = filteredExpenses
-            .where((expense) => expense.category == category.name)
-            .toList();
-      }
+      filteredExpenses = filteredExpenses
+          .where((expense) => expense.category == _selectedCategory)
+          .toList();
     }
 
-    // Сортируем по дате (сначала новые)
     filteredExpenses.sort((a, b) => b.date.compareTo(a.date));
 
     return filteredExpenses;

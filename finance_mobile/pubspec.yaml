@@ -1,28 +1,28 @@
 name: finance_mobile
-description: A new Flutter project
-publish_to: none
+description: A new Flutter project.
+publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.1.5 <4.0.0'
+  sdk: '>=3.0.0 <4.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.2
-  provider: ^6.1.1
-  uuid: ^4.2.1
-  intl: ^0.19.0
   sqflite: ^2.3.0
   path: ^1.8.3
-  fl_chart: ^0.65.0
-  share_plus: ^7.2.1
+  provider: ^6.0.5
+  intl: ^0.18.1
+  shared_preferences: ^2.2.0
+  local_auth: ^2.1.6
+  fl_chart: ^0.63.0
   excel: ^2.1.0
+  uuid: ^4.1.0
   path_provider: ^2.1.1
-  package_info_plus: ^4.1.0
-  url_launcher: ^6.1.14
-  shared_preferences: ^2.2.2
-  timezone: ^0.9.2
+  share_plus: ^7.2.1
+  package_info_plus: ^4.2.0
+  url_launcher: ^6.2.1
 
 dev_dependencies:
   flutter_test:

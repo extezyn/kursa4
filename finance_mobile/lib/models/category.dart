@@ -1,16 +1,16 @@
 class CategoryModel {
   final String id;
   final String name;
-  final String? icon;
-  final String? color;
+  final String icon;
+  final String color;
   final bool isIncome;
 
   CategoryModel({
     required this.id,
     required this.name,
-    this.icon,
-    this.color,
-    required this.isIncome,
+    required this.icon,
+    required this.color,
+    this.isIncome = false,
   });
 
   Map<String, dynamic> toMap() {
@@ -25,11 +25,11 @@ class CategoryModel {
 
   factory CategoryModel.fromMap(Map<String, dynamic> map) {
     return CategoryModel(
-      id: map['id'] as String,
-      name: map['name'] as String,
-      icon: map['icon'] as String?,
-      color: map['color'] as String?,
-      isIncome: (map['isIncome'] as int?) == 1,
+      id: map['id'],
+      name: map['name'],
+      icon: map['icon'],
+      color: map['color'],
+      isIncome: map['isIncome'] == 1,
     );
   }
 

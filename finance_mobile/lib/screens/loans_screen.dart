@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/loan_provider.dart';
 import '../models/loan.dart';
+import 'add_loan_screen.dart';
 
 class LoansScreen extends StatelessWidget {
   const LoansScreen({Key? key}) : super(key: key);
@@ -11,145 +12,121 @@ class LoansScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Кредиты'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const AddLoanScreen()),
+              );
+            },
+          ),
+        ],
       ),
       body: Consumer<LoanProvider>(
-        builder: (context, provider, child) {
-          final loans = provider.loans;
-          if (loans.isEmpty) {
+        builder: (context, loanProvider, child) {
+          if (loanProvider.loans.isEmpty) {
             return const Center(
-              child: Text('Нет активных кредитов'),
+              child: Text('У вас пока нет кредитов'),
             );
           }
 
           return ListView.builder(
-            itemCount: loans.length,
+            itemCount: loanProvider.loans.length,
             itemBuilder: (context, index) {
-              final loan = loans[index];
+              final loan = loanProvider.loans[index];
+              final monthlyPayment = loan.isAnnuity
+                  ? loanProvider.calculateAnnuityPayment(loan)
+                  : loanProvider.calculateDifferentiatedPayment(loan, 1);
+              final totalPayment = loanProvider.calculateTotalPayment(loan);
+              final overpayment = loanProvider.calculateOverpayment(loan);
+
               return Card(
                 margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: ListTile(
-                  title: Text('Кредит на ${loan.amount} ₽'),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Ставка: ${loan.interestRate}%'),
-                      Text('Срок: ${loan.months} месяцев'),
-                      Text('Тип: ${loan.isAnnuity ? "Аннуитетный" : "Дифференцированный"}'),
-                    ],
+                child: ExpansionTile(
+                  title: Text(
+                    'Кредит на ${loan.amount.toStringAsFixed(2)} ₽',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.delete),
-                    onPressed: () => _showDeleteConfirmationDialog(context, loan, provider),
+                  subtitle: Text(
+                    'Ставка: ${loan.interestRate}% | Срок: ${loan.months} мес.',
                   ),
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Тип платежа: ${loan.isAnnuity ? "Аннуитетный" : "Дифференцированный"}',
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Ежемесячный платеж: ${monthlyPayment.toStringAsFixed(2)} ₽',
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Общая сумма выплат: ${totalPayment.toStringAsFixed(2)} ₽',
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Переплата: ${overpayment.toStringAsFixed(2)} ₽',
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.error,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              TextButton(
+                                onPressed: () {
+                                  showDialog(
+                                    context: context,
+                                    builder: (context) => AlertDialog(
+                                      title: const Text('Удалить кредит'),
+                                      content: const Text(
+                                        'Вы уверены, что хотите удалить этот кредит?',
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.pop(context),
+                                          child: const Text('Отмена'),
+                                        ),
+                                        TextButton(
+                                          onPressed: () {
+                                            loanProvider.deleteLoan(loan.id);
+                                            Navigator.pop(context);
+                                          },
+                                          style: TextButton.styleFrom(
+                                            foregroundColor: Theme.of(context)
+                                                .colorScheme
+                                                .error,
+                                          ),
+                                          child: const Text('Удалить'),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                                style: TextButton.styleFrom(
+                                  foregroundColor:
+                                      Theme.of(context).colorScheme.error,
+                                ),
+                                child: const Text('Удалить'),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               );
             },
           );
         },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddLoanDialog(context),
-        child: const Icon(Icons.add),
-      ),
-    );
-  }
-
-  Future<void> _showAddLoanDialog(BuildContext context) async {
-    final amountController = TextEditingController();
-    final rateController = TextEditingController();
-    final monthsController = TextEditingController();
-    bool isAnnuity = true;
-
-    await showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Новый кредит'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: amountController,
-                decoration: const InputDecoration(
-                  labelText: 'Сумма кредита',
-                ),
-                keyboardType: TextInputType.number,
-              ),
-              TextField(
-                controller: rateController,
-                decoration: const InputDecoration(
-                  labelText: 'Процентная ставка',
-                ),
-                keyboardType: TextInputType.number,
-              ),
-              TextField(
-                controller: monthsController,
-                decoration: const InputDecoration(
-                  labelText: 'Срок (месяцев)',
-                ),
-                keyboardType: TextInputType.number,
-              ),
-              SwitchListTile(
-                title: const Text('Аннуитетный платеж'),
-                value: isAnnuity,
-                onChanged: (value) {
-                  isAnnuity = value;
-                },
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Отмена'),
-          ),
-          TextButton(
-            onPressed: () {
-              if (amountController.text.isNotEmpty &&
-                  rateController.text.isNotEmpty &&
-                  monthsController.text.isNotEmpty) {
-                final loan = Loan(
-                  id: DateTime.now().toString(),
-                  amount: double.parse(amountController.text),
-                  interestRate: double.parse(rateController.text),
-                  months: int.parse(monthsController.text),
-                  isAnnuity: isAnnuity,
-                );
-                Provider.of<LoanProvider>(context, listen: false).addLoan(loan);
-                Navigator.pop(context);
-              }
-            },
-            child: const Text('Добавить'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _showDeleteConfirmationDialog(
-    BuildContext context,
-    Loan loan,
-    LoanProvider provider,
-  ) async {
-    await showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Удалить кредит?'),
-        content: Text('Вы уверены, что хотите удалить кредит на сумму ${loan.amount} ₽?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Отмена'),
-          ),
-          TextButton(
-            onPressed: () {
-              provider.deleteLoan(loan.id);
-              Navigator.pop(context);
-            },
-            child: const Text('Удалить'),
-          ),
-        ],
       ),
     );
   }
