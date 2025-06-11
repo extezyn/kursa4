@@ -19,7 +19,7 @@ class _AddExpenseSheetState extends State<AddExpenseSheet> {
   final _noteController = TextEditingController();
   DateTime _selectedDate = DateTime.now();
   bool _isIncome = false;
-  String? _selectedCategory;
+  String? _selectedCategoryId;
 
   @override
   void dispose() {
@@ -29,12 +29,12 @@ class _AddExpenseSheetState extends State<AddExpenseSheet> {
   }
 
   void _submitForm() {
-    if (_formKey.currentState!.validate() && _selectedCategory != null) {
+    if (_formKey.currentState!.validate() && _selectedCategoryId != null) {
       final expense = Expense(
         id: const Uuid().v4(),
         amount: double.parse(_amountController.text),
         date: _selectedDate,
-        category: _selectedCategory!,
+        category: _selectedCategoryId!,
         isIncome: _isIncome,
         note: _noteController.text.isEmpty ? null : _noteController.text,
       );
@@ -60,36 +60,38 @@ class _AddExpenseSheetState extends State<AddExpenseSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return Padding(
       padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
         top: 16,
         left: 16,
         right: 16,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
       ),
       child: Form(
         key: _formKey,
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Row(
-              children: [
-                Text(
-                  'Новая ${_isIncome ? "прибыль" : "трата"}',
-                  style: Theme.of(context).textTheme.titleLarge,
+            SegmentedButton<bool>(
+              segments: const [
+                ButtonSegment<bool>(
+                  value: false,
+                  label: Text('Расход'),
+                  icon: Icon(Icons.remove_circle_outline),
                 ),
-                const Spacer(),
-                Switch(
-                  value: _isIncome,
-                  onChanged: (value) {
-                    setState(() {
-                      _isIncome = value;
-                      _selectedCategory = null;
-                    });
-                  },
+                ButtonSegment<bool>(
+                  value: true,
+                  label: Text('Доход'),
+                  icon: Icon(Icons.add_circle_outline),
                 ),
               ],
+              selected: {_isIncome},
+              onSelectionChanged: (Set<bool> selected) {
+                setState(() {
+                  _isIncome = selected.first;
+                  _selectedCategoryId = null;
+                });
+              },
             ),
             const SizedBox(height: 16),
             TextFormField(
@@ -117,19 +119,19 @@ class _AddExpenseSheetState extends State<AddExpenseSheet> {
                     : categoryProvider.expenseCategories;
 
                 return DropdownButtonFormField<String>(
-                  value: _selectedCategory,
+                  value: _selectedCategoryId,
                   decoration: const InputDecoration(
                     labelText: 'Категория',
                   ),
                   items: categories.map((CategoryModel category) {
                     return DropdownMenuItem<String>(
-                      value: category.name,
+                      value: category.id,
                       child: Text(category.name),
                     );
                   }).toList(),
                   onChanged: (String? value) {
                     setState(() {
-                      _selectedCategory = value;
+                      _selectedCategoryId = value;
                     });
                   },
                   validator: (value) {

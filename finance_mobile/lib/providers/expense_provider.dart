@@ -67,24 +67,38 @@ class ExpenseProvider with ChangeNotifier {
     await loadExpenses();
     
     // Проверяем достижения
-    await _achievementProvider.checkTransactionAchievements(_expenses.length);
+    await _achievementProvider.checkTransactionAchievements(_expenses);
     
-    // Проверяем достижение экономии
-    if (!expense.isIncome) {
-      final monthStart = DateTime(expense.date.year, expense.date.month, 1);
-      final monthEnd = DateTime(expense.date.year, expense.date.month + 1, 0);
-      
-      final monthlyExpenses = _expenses.where((e) => 
-        !e.isIncome && 
-        e.date.isAfter(monthStart) && 
-        e.date.isBefore(monthEnd)
-      );
-      
-      final totalPlanned = 10000.0; // Здесь должен быть запланированный бюджет
-      final totalSpent = monthlyExpenses.fold(0.0, (sum, e) => sum + e.amount);
-      
-      await _achievementProvider.checkSavingsAchievements(totalPlanned, totalSpent);
-    }
+    // Проверяем достижения экономии
+    final monthStart = DateTime(expense.date.year, expense.date.month, 1);
+    final monthEnd = DateTime(expense.date.year, expense.date.month + 1, 0);
+    
+    final monthlyTransactions = _expenses.where((e) => 
+      e.date.isAfter(monthStart) && 
+      e.date.isBefore(monthEnd)
+    );
+    
+    final monthlyIncome = monthlyTransactions
+      .where((e) => e.isIncome)
+      .fold(0.0, (sum, e) => sum + e.amount);
+    
+    final monthlyExpense = monthlyTransactions
+      .where((e) => !e.isIncome)
+      .fold(0.0, (sum, e) => sum + e.amount);
+    
+    await _achievementProvider.checkSavingsAchievements(monthlyIncome, monthlyExpense);
+
+    // Проверяем достижение разнообразия доходов
+    final uniqueIncomeCategories = _expenses
+      .where((e) => e.isIncome)
+      .map((e) => e.category)
+      .toSet()
+      .length;
+    
+    await _achievementProvider.checkIncomeSourceAchievements(uniqueIncomeCategories);
+    
+    // Проверяем достижение регулярного использования
+    await _achievementProvider.checkRegularUserAchievement();
   }
 
   Future<void> updateExpense(Expense expense) async {

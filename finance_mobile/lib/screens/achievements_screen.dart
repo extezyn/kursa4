@@ -8,16 +8,30 @@ class AchievementsScreen extends StatelessWidget {
 
   IconData _getIconData(String iconName) {
     switch (iconName) {
-      case 'star':
-        return Icons.star;
-      case 'savings':
-        return Icons.savings;
+      case 'edit_note':
+        return Icons.edit_note;
+      case 'payments':
+        return Icons.payments;
+      case 'shopping_cart':
+        return Icons.shopping_cart;
       case 'category':
         return Icons.category;
-      case 'money':
-        return Icons.money;
-      case 'calendar':
+      case 'savings':
+        return Icons.savings;
+      case 'calendar_today':
         return Icons.calendar_today;
+      case 'format_list_numbered':
+        return Icons.format_list_numbered;
+      case 'account_balance':
+        return Icons.account_balance;
+      case 'trending_down':
+        return Icons.trending_down;
+      case 'account_tree':
+        return Icons.account_tree;
+      case 'analytics':
+        return Icons.analytics;
+      case 'stars':
+        return Icons.stars;
       default:
         return Icons.emoji_events;
     }
@@ -35,7 +49,33 @@ class AchievementsScreen extends StatelessWidget {
           
           if (achievements.isEmpty) {
             return const Center(
-              child: Text('Нет доступных достижений'),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.emoji_events_outlined,
+                    size: 64,
+                    color: Colors.grey,
+                  ),
+                  SizedBox(height: 16),
+                  Text(
+                    'Нет доступных достижений',
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: Colors.grey,
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    'Начните пользоваться приложением,\nчтобы открыть достижения',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ],
+              ),
             );
           }
 
@@ -70,14 +110,11 @@ class AchievementsScreen extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        '${achievement.progress.toInt()}/${achievement.targetValue.toInt()}',
+                        '${achievement.progress}/${achievement.targetValue}',
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ],
                   ),
-                  trailing: achievement.isUnlocked
-                      ? const Icon(Icons.check_circle, color: Colors.green)
-                      : const Icon(Icons.lock_outline, color: Colors.grey),
                 ),
               );
             },

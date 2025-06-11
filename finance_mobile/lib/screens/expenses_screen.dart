@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/expense_provider.dart';
+import '../providers/category_provider.dart';
 import '../widgets/expense_list_item.dart';
 import '../widgets/add_expense_sheet.dart';
 import '../widgets/filter_sheet.dart';
+import '../services/export_service.dart';
 
 class ExpensesScreen extends StatelessWidget {
   const ExpensesScreen({Key? key}) : super(key: key);
@@ -41,6 +43,33 @@ class ExpensesScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _exportToExcel(BuildContext context) async {
+    try {
+      final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
+      final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
+      
+      await ExportService.exportData(
+        expenseProvider.expenses,
+        categoryProvider,
+      );
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Экспорт успешно завершен'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Ошибка при экспорте: $e'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
   }
 
   Widget _buildFilterChips(ExpenseProvider expenseProvider) {
@@ -88,51 +117,52 @@ class ExpensesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Транзакции'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.filter_list),
-            onPressed: () {
-              final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
-              _showFilterSheet(context, expenseProvider);
-            },
+    return Consumer<ExpenseProvider>(
+      builder: (context, expenseProvider, child) {
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Транзакции'),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.file_download),
+                onPressed: () => _exportToExcel(context),
+                tooltip: 'Экспорт в Excel',
+              ),
+              IconButton(
+                icon: const Icon(Icons.filter_list),
+                onPressed: () => _showFilterSheet(context, expenseProvider),
+                tooltip: 'Фильтры',
+              ),
+            ],
           ),
-        ],
-      ),
-      body: Consumer<ExpenseProvider>(
-        builder: (context, expenseProvider, child) {
-          final expenses = expenseProvider.expenses;
-          
-          return Column(
+          body: Column(
             children: [
               _buildFilterChips(expenseProvider),
               Expanded(
                 child: RefreshIndicator(
                   onRefresh: () => expenseProvider.loadExpenses(),
-                  child: expenses.isEmpty
+                  child: expenseProvider.expenses.isEmpty
                       ? const Center(
                           child: Text('Нет транзакций'),
                         )
                       : ListView.builder(
                           padding: const EdgeInsets.all(8),
-                          itemCount: expenses.length,
+                          itemCount: expenseProvider.expenses.length,
                           itemBuilder: (context, index) {
-                            final expense = expenses[index];
+                            final expense = expenseProvider.expenses[index];
                             return ExpenseListItem(expense: expense);
                           },
                         ),
                 ),
               ),
             ],
-          );
-        },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddExpenseSheet(context),
-        child: const Icon(Icons.add),
-      ),
+          ),
+          floatingActionButton: FloatingActionButton(
+            onPressed: () => _showAddExpenseSheet(context),
+            child: const Icon(Icons.add),
+          ),
+        );
+      },
     );
   }
 } 

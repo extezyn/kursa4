@@ -5,6 +5,7 @@ import '../models/loan.dart';
 import '../models/category.dart';
 import '../models/achievement.dart';
 import '../models/reminder.dart';
+import 'package:flutter/foundation.dart';
 
 class DatabaseService {
   static Database? _database;
@@ -42,7 +43,8 @@ class DatabaseService {
               id TEXT PRIMARY KEY,
               name TEXT NOT NULL,
               icon TEXT NOT NULL,
-              color TEXT NOT NULL
+              color TEXT NOT NULL,
+              isIncome INTEGER NOT NULL DEFAULT 0
             )
           ''');
 
@@ -60,6 +62,20 @@ class DatabaseService {
             )
           ''');
 
+          // Создаем таблицу напоминаний
+          await db.execute('''
+            CREATE TABLE reminders (
+              id TEXT PRIMARY KEY,
+              title TEXT NOT NULL,
+              description TEXT,
+              date TEXT NOT NULL,
+              isCompleted INTEGER DEFAULT 0,
+              amount REAL,
+              category TEXT,
+              isIncome INTEGER DEFAULT 0
+            )
+          ''');
+
           // Создаем таблицу кредитов
           await db.execute('''
             CREATE TABLE loans (
@@ -73,41 +89,42 @@ class DatabaseService {
 
           // Создаем базовые категории
           await db.execute('''
-            INSERT INTO categories (id, name, icon, color) VALUES
-              ('groceries', 'Продукты', 'shopping_cart', '#4CAF50'),
-              ('cafe', 'Кафе и рестораны', 'restaurant', '#FF9800'),
-              ('transport', 'Транспорт', 'directions_car', '#2196F3'),
-              ('entertainment', 'Развлечения', 'movie', '#9C27B0'),
-              ('health', 'Здоровье', 'local_hospital', '#F44336'),
-              ('home', 'Жилье', 'home', '#795548'),
-              ('clothes', 'Одежда', 'checkroom', '#607D8B'),
-              ('communication', 'Связь', 'phone_android', '#00BCD4'),
-              ('education', 'Образование', 'school', '#3F51B5'),
-              ('gifts_exp', 'Подарки', 'card_giftcard', '#E91E63'),
-              ('salary', 'Зарплата', 'account_balance_wallet', '#4CAF50'),
-              ('freelance', 'Фриланс', 'computer', '#2196F3'),
-              ('gifts_inc', 'Подарки', 'redeem', '#E91E63'),
-              ('investments', 'Инвестиции', 'trending_up', '#FFC107'),
-              ('business', 'Бизнес', 'business_center', '#009688')
+            INSERT INTO categories (id, name, icon, color, isIncome) VALUES
+              ('groceries', 'Продукты', 'shopping_cart', '#4CAF50', 0),
+              ('cafe', 'Кафе и рестораны', 'restaurant', '#FF9800', 0),
+              ('transport', 'Транспорт', 'directions_car', '#2196F3', 0),
+              ('entertainment', 'Развлечения', 'movie', '#9C27B0', 0),
+              ('health', 'Здоровье', 'local_hospital', '#F44336', 0),
+              ('home', 'Жилье', 'home', '#795548', 0),
+              ('clothes', 'Одежда', 'checkroom', '#607D8B', 0),
+              ('communication', 'Связь', 'phone_android', '#00BCD4', 0),
+              ('education', 'Образование', 'school', '#3F51B5', 0),
+              ('gifts_exp', 'Подарки', 'card_giftcard', '#E91E63', 0),
+              ('salary', 'Зарплата', 'account_balance_wallet', '#4CAF50', 1),
+              ('freelance', 'Фриланс', 'computer', '#2196F3', 1),
+              ('gifts_inc', 'Подарки', 'redeem', '#E91E63', 1),
+              ('investments', 'Инвестиции', 'trending_up', '#FFC107', 1),
+              ('business', 'Бизнес', 'business_center', '#009688', 1)
           ''');
 
           // Создаем базовые достижения
           await db.execute('''
             INSERT INTO achievements (id, name, description, icon, targetValue, type, progress, isUnlocked) VALUES
-              ('first_transaction', 'Первая запись', 'Создайте первую запись о расходах или доходах', 'edit_note', 1, 'transactions', 0, 0),
-              ('first_category', 'Первая категория', 'Создайте свою первую категорию', 'category', 1, 'categories', 0, 0),
-              ('first_income', 'Первый доход', 'Добавьте первую запись о доходе', 'payments', 1, 'income', 0, 0),
-              ('week_usage', '7 дней использования', 'Используйте приложение 7 дней подряд', 'calendar_month', 7, 'usage_days', 0, 0),
-              ('hundred_transactions', '100 транзакций', 'Создайте 100 записей о расходах и доходах', 'format_list_numbered', 100, 'transactions', 0, 0),
-              ('positive_month', 'Положительный месяц', 'Сохраняйте положительный баланс целый месяц', 'trending_up', 30, 'balance_days', 0, 0),
-              ('savings_goal', 'Цель накопления', 'Достигните поставленной цели накопления', 'flag', 1, 'savings_goal', 0, 0),
-              ('five_categories', '5 категорий', 'Создайте 5 собственных категорий', 'category', 5, 'categories', 0, 0),
-              ('savings_10', 'Накопление 10%', 'Накопите 10% от месячного дохода', 'savings', 10, 'savings_percent', 0, 0),
-              ('economy_20', 'Экономия 20%', 'Сэкономьте 20% от планируемых расходов', 'trending_down', 20, 'economy_percent', 0, 0),
-              ('month_budget', '30 дней учета', 'Ведите учет бюджета 30 дней подряд', 'event_available', 30, 'budget_days', 0, 0),
-              ('big_purchase', 'Крупная покупка', 'Совершите покупку на сумму более 100000', 'stars', 100000, 'single_expense', 0, 0),
-              ('millionaire', 'Миллионер', 'Накопите 1000000 на счету', 'diamond', 1000000, 'balance', 0, 0),
-              ('finance_guru', 'Финансовый гуру', 'Получите все остальные достижения', 'workspace_premium', 13, 'total_achievements', 0, 0)
+              ('first_steps', 'Первые шаги', 'Добавьте первую транзакцию', 'edit_note', 1, 'transactions', 0, 0),
+              ('first_income', 'Первый доход', 'Добавьте первую запись о доходах', 'payments', 1, 'income', 0, 0),
+              ('first_expense', 'Первый расход', 'Добавьте первую запись о расходах', 'shopping_cart', 1, 'expenses', 0, 0),
+              ('category_creator', 'Создатель категорий', 'Создайте свою первую категорию', 'category', 1, 'categories', 0, 0),
+              ('category_master', 'Мастер категорий', 'Создайте 5 собственных категорий', 'category', 5, 'categories', 0, 0),
+              ('saver_10', 'Накопитель 10%', 'Сэкономьте 10% от месячного дохода', 'savings', 10, 'savings', 0, 0),
+              ('saver_20', 'Накопитель 20%', 'Сэкономьте 20% от месячного дохода', 'savings', 20, 'savings', 0, 0),
+              ('regular_user', 'Постоянный пользователь', 'Используйте приложение 7 дней подряд', 'calendar_today', 7, 'usage', 0, 0),
+              ('transaction_master', 'Мастер учета', 'Создайте 50 записей о расходах и доходах', 'format_list_numbered', 50, 'transactions', 0, 0),
+              ('budget_planner', 'Планировщик бюджета', 'Создайте бюджет на месяц', 'account_balance', 1, 'budget', 0, 0),
+              ('expense_tracker', 'Контроль расходов', 'Отслеживайте расходы 30 дней подряд', 'trending_down', 30, 'tracking', 0, 0),
+              ('income_diversification', 'Диверсификация доходов', 'Добавьте 3 разных источника дохода', 'account_tree', 3, 'income_sources', 0, 0),
+              ('money_saver', 'Большие накопления', 'Накопите 100,000 на счету', 'savings', 100000, 'balance', 0, 0),
+              ('expense_analyzer', 'Аналитик расходов', 'Проанализируйте расходы за месяц', 'analytics', 1, 'analysis', 0, 0),
+              ('budget_master', 'Мастер бюджета', 'Не превышайте бюджет 3 месяца подряд', 'stars', 3, 'budget_streak', 0, 0)
           ''');
         },
       );
@@ -178,10 +195,11 @@ class DatabaseService {
 
     return List.generate(maps.length, (i) {
       return CategoryModel(
-        id: maps[i]['id'],
-        name: maps[i]['name'],
-        icon: maps[i]['icon'],
-        color: maps[i]['color'],
+        id: maps[i]['id'] as String,
+        name: maps[i]['name'] as String,
+        icon: maps[i]['icon'] as String,
+        color: maps[i]['color'] as String,
+        isIncome: maps[i]['isIncome'] == 1,
       );
     });
   }
@@ -195,8 +213,18 @@ class DatabaseService {
         'name': category.name,
         'icon': category.icon,
         'color': category.color,
+        'isIncome': category.isIncome ? 1 : 0,
       },
       conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  static Future<void> deleteCategory(String id) async {
+    final db = await database;
+    await db.delete(
+      'categories',
+      where: 'id = ?',
+      whereArgs: [id],
     );
   }
 
@@ -266,20 +294,37 @@ class DatabaseService {
   }
 
   static Future<List<Achievement>> getAchievements() async {
-    final db = await database;
-    final List<Map<String, dynamic>> maps = await db.query('achievements');
+    try {
+      final db = await database;
+      final List<Map<String, dynamic>> maps = await db.query('achievements');
 
-    return List.generate(maps.length, (i) {
-      return Achievement.fromJson({
-        'id': maps[i]['id'],
-        'name': maps[i]['name'],
-        'description': maps[i]['description'],
-        'icon': maps[i]['icon'],
-        'isUnlocked': maps[i]['isUnlocked'] == 1,
-        'progress': maps[i]['progress'],
-        'targetValue': maps[i]['targetValue'],
+      if (maps.isEmpty) {
+        // Если достижений нет, попробуем их создать заново
+        await db.execute('''
+          INSERT INTO achievements (id, name, description, icon, targetValue, type, progress, isUnlocked) VALUES
+            ('first_steps', 'Первые шаги', 'Добавьте первую транзакцию', 'edit_note', 1, 'transactions', 0, 0),
+            ('first_income', 'Первый доход', 'Добавьте первую запись о доходах', 'payments', 1, 'income', 0, 0),
+            ('first_expense', 'Первый расход', 'Добавьте первую запись о расходах', 'shopping_cart', 1, 'expenses', 0, 0)
+          ''');
+        return getAchievements();
+      }
+
+      return List.generate(maps.length, (i) {
+        return Achievement.fromJson({
+          'id': maps[i]['id'],
+          'name': maps[i]['name'],
+          'description': maps[i]['description'],
+          'icon': maps[i]['icon'],
+          'isUnlocked': maps[i]['isUnlocked'] == 1,
+          'progress': maps[i]['progress'],
+          'targetValue': maps[i]['targetValue'],
+          'type': maps[i]['type'],
+        });
       });
-    });
+    } catch (e) {
+      debugPrint('Ошибка при получении достижений: $e');
+      return [];
+    }
   }
 
   static Future<void> updateAchievement(Achievement achievement) async {
@@ -335,12 +380,28 @@ class DatabaseService {
 
   static Future<void> clearAllData() async {
     final db = await database;
-    await db.transaction((txn) async {
-      await txn.delete('expenses');
-      await txn.delete('loans');
-      await txn.delete('categories');
-      await txn.delete('achievements');
-      await txn.delete('reminders');
-    });
+    try {
+      await db.transaction((txn) async {
+        // Получаем список всех таблиц
+        final tables = await txn.rawQuery(
+          "SELECT name FROM sqlite_master WHERE type='table' AND name NOT IN ('android_metadata', 'sqlite_sequence')"
+        );
+        
+        // Удаляем данные из каждой таблицы
+        for (var table in tables) {
+          final tableName = table['name'] as String;
+          await txn.delete(tableName);
+        }
+      });
+    } catch (e) {
+      debugPrint('Ошибка при очистке данных: $e');
+      // Если произошла ошибка, пробуем удалить данные из известных таблиц
+      await db.transaction((txn) async {
+        await txn.delete('expenses');
+        await txn.delete('categories');
+        await txn.delete('achievements');
+        await txn.delete('loans');
+      });
+    }
   }
 }

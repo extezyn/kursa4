@@ -50,188 +50,6 @@ class _CategoriesScreenState extends State<CategoriesScreen>
     super.dispose();
   }
 
-  void _showAddCategoryDialog(BuildContext context, bool isIncome) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(isIncome ? 'Добавить категорию дохода' : 'Добавить категорию расхода'),
-        content: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Название категории',
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Пожалуйста, введите название категории';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                value: _selectedIcon,
-                decoration: const InputDecoration(
-                  labelText: 'Иконка',
-                ),
-                items: iconMap.entries.map((entry) {
-                  return DropdownMenuItem(
-                    value: entry.key,
-                    child: Row(
-                      children: [
-                        Icon(entry.value),
-                        const SizedBox(width: 8),
-                        Text(entry.key),
-                      ],
-                    ),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedIcon = value!;
-                  });
-                },
-              ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                value: _selectedColor,
-                decoration: const InputDecoration(
-                  labelText: 'Цвет',
-                ),
-                items: const [
-                  DropdownMenuItem(
-                    value: '#4CAF50',
-                    child: Row(
-                      children: [
-                        CircleAvatar(
-                          backgroundColor: Colors.green,
-                          radius: 12,
-                        ),
-                        SizedBox(width: 8),
-                        Text('Зеленый'),
-                      ],
-                    ),
-                  ),
-                  DropdownMenuItem(
-                    value: '#2196F3',
-                    child: Row(
-                      children: [
-                        CircleAvatar(
-                          backgroundColor: Colors.blue,
-                          radius: 12,
-                        ),
-                        SizedBox(width: 8),
-                        Text('Синий'),
-                      ],
-                    ),
-                  ),
-                  DropdownMenuItem(
-                    value: '#9C27B0',
-                    child: Row(
-                      children: [
-                        CircleAvatar(
-                          backgroundColor: Colors.purple,
-                          radius: 12,
-                        ),
-                        SizedBox(width: 8),
-                        Text('Фиолетовый'),
-                      ],
-                    ),
-                  ),
-                ],
-                onChanged: (value) {
-                  setState(() {
-                    _selectedColor = value!;
-                  });
-                },
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              _nameController.clear();
-              Navigator.pop(context);
-            },
-            child: const Text('Отмена'),
-          ),
-          TextButton(
-            onPressed: () {
-              if (_formKey.currentState!.validate()) {
-                final category = CategoryModel(
-                  id: DateTime.now().toString(),
-                  name: _nameController.text,
-                  icon: _selectedIcon,
-                  color: _selectedColor,
-                  isIncome: isIncome,
-                );
-
-                Provider.of<CategoryProvider>(context, listen: false)
-                    .addCategory(category);
-
-                _nameController.clear();
-                Navigator.pop(context);
-              }
-            },
-            child: const Text('Добавить'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCategoryList(List<CategoryModel> categories) {
-    return ListView.builder(
-      itemCount: categories.length,
-      itemBuilder: (context, index) {
-        final category = categories[index];
-        return ListTile(
-          leading: Icon(
-            iconMap[category.icon] ?? Icons.help_outline,
-            color: Color(
-              int.parse(category.color.replaceAll('#', '0xFF')),
-            ),
-          ),
-          title: Text(category.name),
-          trailing: IconButton(
-            icon: const Icon(Icons.delete),
-            onPressed: () {
-              showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('Удалить категорию'),
-                  content: Text('Вы уверены, что хотите удалить категорию "${category.name}"?'),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('Отмена'),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        Provider.of<CategoryProvider>(context, listen: false)
-                            .deleteCategory(category.id);
-                        Navigator.pop(context);
-                      },
-                      style: TextButton.styleFrom(
-                        foregroundColor: Theme.of(context).colorScheme.error,
-                      ),
-                      child: const Text('Удалить'),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -250,18 +68,152 @@ class _CategoriesScreenState extends State<CategoriesScreen>
           return TabBarView(
             controller: _tabController,
             children: [
-              _buildCategoryList(provider.expenseCategories),
-              _buildCategoryList(provider.incomeCategories),
+              // Вкладка расходов
+              ListView.builder(
+                itemCount: provider.expenseCategories.length,
+                itemBuilder: (context, index) {
+                  final category = provider.expenseCategories[index];
+                  return ListTile(
+                    leading: Icon(
+                      iconMap[category.icon] ?? Icons.category,
+                      color: Color(int.parse(category.color.replaceAll('#', '0xFF'))),
+                    ),
+                    title: Text(category.name),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.delete),
+                      onPressed: () => _showDeleteDialog(context, category),
+                    ),
+                  );
+                },
+              ),
+              // Вкладка доходов
+              ListView.builder(
+                itemCount: provider.incomeCategories.length,
+                itemBuilder: (context, index) {
+                  final category = provider.incomeCategories[index];
+                  return ListTile(
+                    leading: Icon(
+                      iconMap[category.icon] ?? Icons.category,
+                      color: Color(int.parse(category.color.replaceAll('#', '0xFF'))),
+                    ),
+                    title: Text(category.name),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.delete),
+                      onPressed: () => _showDeleteDialog(context, category),
+                    ),
+                  );
+                },
+              ),
             ],
           );
         },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddCategoryDialog(
-          context,
-          _tabController.index == 1,
-        ),
+        onPressed: () => _showAddCategoryDialog(context),
         child: const Icon(Icons.add),
+      ),
+    );
+  }
+
+  Future<void> _showAddCategoryDialog(BuildContext context) async {
+    bool isIncome = _tabController.index == 1;
+    _nameController.clear();
+    _selectedIcon = isIncome ? 'account_balance_wallet' : 'shopping_cart';
+    _selectedColor = '#4CAF50';
+
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Добавить ${isIncome ? "доход" : "расход"}'),
+        content: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: _nameController,
+                decoration: const InputDecoration(labelText: 'Название категории'),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Пожалуйста, введите название';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                value: _selectedIcon,
+                decoration: const InputDecoration(labelText: 'Иконка'),
+                items: iconMap.keys.map((String icon) {
+                  return DropdownMenuItem<String>(
+                    value: icon,
+                    child: Row(
+                      children: [
+                        Icon(iconMap[icon]),
+                        const SizedBox(width: 8),
+                        Text(icon),
+                      ],
+                    ),
+                  );
+                }).toList(),
+                onChanged: (String? value) {
+                  if (value != null) {
+                    setState(() {
+                      _selectedIcon = value;
+                    });
+                  }
+                },
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Отмена'),
+          ),
+          TextButton(
+            onPressed: () {
+              if (_formKey.currentState!.validate()) {
+                final category = CategoryModel(
+                  id: DateTime.now().millisecondsSinceEpoch.toString(),
+                  name: _nameController.text,
+                  icon: _selectedIcon,
+                  color: _selectedColor,
+                  isIncome: isIncome,
+                );
+                Provider.of<CategoryProvider>(context, listen: false)
+                    .addCategory(category);
+                Navigator.pop(context);
+              }
+            },
+            child: const Text('Добавить'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showDeleteDialog(BuildContext context, CategoryModel category) {
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Удалить категорию'),
+        content: Text('Вы уверены, что хотите удалить категорию "${category.name}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Отмена'),
+          ),
+          TextButton(
+            onPressed: () {
+              Provider.of<CategoryProvider>(context, listen: false)
+                  .deleteCategory(category.id);
+              Navigator.pop(context);
+            },
+            child: const Text('Удалить'),
+          ),
+        ],
       ),
     );
   }

@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/achievement.dart';
 import '../services/database_service.dart';
+import '../models/expense.dart';
 
 class AchievementProvider with ChangeNotifier {
   List<Achievement> _achievements = [];
@@ -18,35 +19,69 @@ class AchievementProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> checkTransactionAchievements(int transactionCount) async {
+  Future<void> checkTransactionAchievements(List<Expense> expenses) async {
+    // Первая транзакция
+    var firstSteps = _achievements.firstWhere((a) => a.id == 'first_steps');
+    if (!firstSteps.isUnlocked && expenses.isNotEmpty) {
+      await _updateAchievement('first_steps', 1, true);
+    }
+
+    // Первый доход
+    var firstIncome = _achievements.firstWhere((a) => a.id == 'first_income');
+    if (!firstIncome.isUnlocked && expenses.any((e) => e.isIncome)) {
+      await _updateAchievement('first_income', 1, true);
+    }
+
+    // Первый расход
     var firstExpense = _achievements.firstWhere((a) => a.id == 'first_expense');
-    if (!firstExpense.isUnlocked && transactionCount >= 1) {
-      await unlockAchievement('first_expense');
+    if (!firstExpense.isUnlocked && expenses.any((e) => !e.isIncome)) {
+      await _updateAchievement('first_expense', 1, true);
+    }
+
+    // Мастер учета (50 транзакций)
+    var transactionMaster = _achievements.firstWhere((a) => a.id == 'transaction_master');
+    if (!transactionMaster.isUnlocked) {
+      int progress = expenses.length;
+      bool isUnlocked = progress >= 50;
+      await _updateAchievement('transaction_master', progress, isUnlocked);
     }
   }
 
-  Future<void> checkSavingsAchievements(double planned, double actual) async {
-    if (planned <= 0) return;
+  Future<void> checkSavingsAchievements(double monthlyIncome, double monthlyExpense) async {
+    if (monthlyIncome <= 0) return;
     
-    var savings = ((planned - actual) / planned) * 100;
-    var savingsMaster = _achievements.firstWhere((a) => a.id == 'savings_master');
+    var savings = ((monthlyIncome - monthlyExpense) / monthlyIncome) * 100;
     
-    if (!savingsMaster.isUnlocked && savings >= 20) {
-      await unlockAchievement('savings_master');
+    // Накопитель 10%
+    var saver10 = _achievements.firstWhere((a) => a.id == 'saver_10');
+    if (!saver10.isUnlocked) {
+      int progress = savings.floor();
+      bool isUnlocked = savings >= 10;
+      await _updateAchievement('saver_10', progress, isUnlocked);
+    }
+
+    // Накопитель 20%
+    var saver20 = _achievements.firstWhere((a) => a.id == 'saver_20');
+    if (!saver20.isUnlocked) {
+      int progress = savings.floor();
+      bool isUnlocked = savings >= 20;
+      await _updateAchievement('saver_20', progress, isUnlocked);
     }
   }
 
   Future<void> checkCategoryAchievements(int categoryCount) async {
-    var categoryExpert = _achievements.firstWhere((a) => a.id == 'category_expert');
-    if (!categoryExpert.isUnlocked && categoryCount >= 5) {
-      await unlockAchievement('category_expert');
+    // Создатель категорий (первая категория)
+    var categoryCreator = _achievements.firstWhere((a) => a.id == 'category_creator');
+    if (!categoryCreator.isUnlocked && categoryCount >= 1) {
+      await _updateAchievement('category_creator', 1, true);
     }
-  }
 
-  Future<void> checkBigSpenderAchievement(double amount) async {
-    var bigSpender = _achievements.firstWhere((a) => a.id == 'big_spender');
-    if (!bigSpender.isUnlocked && amount >= 100000) {
-      await unlockAchievement('big_spender');
+    // Мастер категорий (5 категорий)
+    var categoryMaster = _achievements.firstWhere((a) => a.id == 'category_master');
+    if (!categoryMaster.isUnlocked) {
+      int progress = categoryCount;
+      bool isUnlocked = categoryCount >= 5;
+      await _updateAchievement('category_master', progress, isUnlocked);
     }
   }
 
@@ -57,20 +92,58 @@ class AchievementProvider with ChangeNotifier {
     
     if (lastUsageDate != currentDate) {
       final consecutiveDays = prefs.getInt('consecutive_days') ?? 0;
-      await prefs.setInt('consecutive_days', consecutiveDays + 1);
+      final newConsecutiveDays = consecutiveDays + 1;
+      
+      // Проверяем, не пропущен ли день
+      if (lastUsageDate != null) {
+        final lastDate = DateTime.parse(lastUsageDate);
+        final today = DateTime.parse(currentDate);
+        if (today.difference(lastDate).inDays > 1) {
+          await prefs.setInt('consecutive_days', 1);
+          await prefs.setString('last_usage_date', currentDate);
+          await _updateAchievement('regular_user', 1, false);
+          return;
+        }
+      }
+      
+      await prefs.setInt('consecutive_days', newConsecutiveDays);
       await prefs.setString('last_usage_date', currentDate);
       
       var regularUser = _achievements.firstWhere((a) => a.id == 'regular_user');
-      if (!regularUser.isUnlocked && consecutiveDays + 1 >= 7) {
-        await unlockAchievement('regular_user');
+      if (!regularUser.isUnlocked) {
+        await _updateAchievement('regular_user', newConsecutiveDays, newConsecutiveDays >= 7);
       }
     }
   }
 
-  Future<void> unlockAchievement(String id) async {
+  Future<void> checkBudgetAchievements(bool hasBudget, int monthsWithinBudget) async {
+    // Планировщик бюджета
+    var budgetPlanner = _achievements.firstWhere((a) => a.id == 'budget_planner');
+    if (!budgetPlanner.isUnlocked && hasBudget) {
+      await _updateAchievement('budget_planner', 1, true);
+    }
+
+    // Мастер бюджета
+    var budgetMaster = _achievements.firstWhere((a) => a.id == 'budget_master');
+    if (!budgetMaster.isUnlocked) {
+      await _updateAchievement('budget_master', monthsWithinBudget, monthsWithinBudget >= 3);
+    }
+  }
+
+  Future<void> checkIncomeSourceAchievements(int uniqueIncomeSourcesCount) async {
+    var incomeDiversification = _achievements.firstWhere((a) => a.id == 'income_diversification');
+    if (!incomeDiversification.isUnlocked) {
+      await _updateAchievement('income_diversification', uniqueIncomeSourcesCount, uniqueIncomeSourcesCount >= 3);
+    }
+  }
+
+  Future<void> _updateAchievement(String id, int progress, bool isUnlocked) async {
     var achievement = _achievements.firstWhere((a) => a.id == id);
-    achievement = achievement.copyWith(isUnlocked: true, progress: achievement.targetValue);
-    await DatabaseService.updateAchievement(achievement);
+    var updatedAchievement = achievement.copyWith(
+      progress: progress,
+      isUnlocked: isUnlocked,
+    );
+    await DatabaseService.updateAchievement(updatedAchievement);
     await loadAchievements();
   }
 } 

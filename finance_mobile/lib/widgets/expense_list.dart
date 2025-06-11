@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/expense.dart';
 import '../providers/expense_provider.dart';
+import '../providers/category_provider.dart';
 import '../screens/edit_expense_screen.dart';
 import 'package:intl/intl.dart';
 
@@ -56,8 +57,12 @@ class _ExpenseListState extends State<ExpenseList> {
     );
   }
 
-  String _getCategoryIcon(String category) {
-    switch (category.toLowerCase()) {
+  String _getCategoryIcon(String categoryId, BuildContext context) {
+    final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
+    final category = categoryProvider.getCategoryById(categoryId);
+    if (category == null) return '📝';
+
+    switch (category.name.toLowerCase()) {
       case 'продукты':
         return '🛒';
       case 'кафе и рестораны':
@@ -118,6 +123,7 @@ class _ExpenseListState extends State<ExpenseList> {
   Widget build(BuildContext context) {
     final dateFormat = DateFormat('dd.MM.yyyy');
     final filteredExpenses = _getFilteredAndSortedExpenses();
+    final categoryProvider = Provider.of<CategoryProvider>(context);
     
     return Column(
       children: [
@@ -201,7 +207,7 @@ class _ExpenseListState extends State<ExpenseList> {
                             ),
                             child: Center(
                               child: Text(
-                                _getCategoryIcon(expense.category),
+                                _getCategoryIcon(expense.category, context),
                                 style: const TextStyle(fontSize: 24),
                               ),
                             ),
@@ -212,7 +218,7 @@ class _ExpenseListState extends State<ExpenseList> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  expense.category,
+                                  categoryProvider.getCategoryName(expense.category),
                                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                     fontWeight: FontWeight.bold,
                                   ),

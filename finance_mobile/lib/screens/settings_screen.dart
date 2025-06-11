@@ -174,16 +174,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
 
     if (confirmed ?? false) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.clear();
-      await _loadSettings();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Настройки сброшены'),
-            backgroundColor: Colors.green,
-          ),
-        );
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        // Сбрасываем только настройки приложения, а не все данные
+        await prefs.setBool('isDarkMode', false);
+        await prefs.remove('pin');
+        
+        // Обновляем состояние
+        setState(() {
+          _isDarkMode = false;
+          _isPinEnabled = false;
+          _pin = null;
+        });
+
+        // Обновляем тему в провайдере
+        if (mounted) {
+          Provider.of<ThemeProvider>(context, listen: false).toggleTheme(false);
+        }
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Настройки сброшены'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Ошибка при сбросе настроек: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     }
   }
@@ -241,14 +266,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
           ListTile(
-            leading: const Icon(Icons.fingerprint),
-            title: const Text('Биометрическая аутентификация'),
-            trailing: Switch(
-              value: _isBiometricEnabled,
-              onChanged: _toggleBiometric,
-            ),
-          ),
-          ListTile(
             leading: const Icon(Icons.pin),
             title: const Text('PIN-код'),
             trailing: Switch(
@@ -271,17 +288,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 }
               },
             ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.privacy_tip),
-            title: const Text('Политика конфиденциальности'),
-            onTap: _launchPrivacyPolicy,
-          ),
-          ListTile(
-            leading: const Icon(Icons.description),
-            title: const Text('Условия использования'),
-            onTap: _launchTerms,
-          ),
           const Divider(),
           ListTile(
             leading: const Icon(Icons.restore),

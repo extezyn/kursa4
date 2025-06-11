@@ -66,7 +66,11 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => AchievementProvider()),
-        ChangeNotifierProvider(create: (_) => CategoryProvider()),
+        ChangeNotifierProvider(
+          create: (context) => CategoryProvider(
+            Provider.of<AchievementProvider>(context, listen: false),
+          ),
+        ),
         ChangeNotifierProvider(
           create: (context) => ExpenseProvider(
             Provider.of<CategoryProvider>(context, listen: false),

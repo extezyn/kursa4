@@ -13,7 +13,17 @@ class CategoryModel {
     this.isIncome = false,
   });
 
-  Map<String, dynamic> toMap() {
+  factory CategoryModel.fromJson(Map<String, dynamic> json) {
+    return CategoryModel(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      icon: json['icon'] as String,
+      color: json['color'] as String,
+      isIncome: json['isIncome'] == 1,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
     return {
       'id': id,
       'name': name,
@@ -21,16 +31,6 @@ class CategoryModel {
       'color': color,
       'isIncome': isIncome ? 1 : 0,
     };
-  }
-
-  factory CategoryModel.fromMap(Map<String, dynamic> map) {
-    return CategoryModel(
-      id: map['id'],
-      name: map['name'],
-      icon: map['icon'],
-      color: map['color'],
-      isIncome: map['isIncome'] == 1,
-    );
   }
 
   CategoryModel copyWith({

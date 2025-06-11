@@ -4,8 +4,8 @@ class Achievement {
   final String description;
   final String icon;
   final bool isUnlocked;
-  final double progress;
-  final double targetValue;
+  final int progress;
+  final int targetValue;
   final String type;
 
   Achievement({
@@ -21,14 +21,14 @@ class Achievement {
 
   factory Achievement.fromJson(Map<String, dynamic> json) {
     return Achievement(
-      id: json['id'],
-      name: json['name'],
-      description: json['description'],
-      icon: json['icon'],
+      id: json['id'] as String,
+      name: json['name'] as String,
+      description: json['description'] as String,
+      icon: json['icon'] as String,
       isUnlocked: json['isUnlocked'] == 1,
-      progress: json['progress'] ?? 0,
-      targetValue: json['targetValue'],
-      type: json['type'],
+      progress: json['progress'] as int? ?? 0,
+      targetValue: json['targetValue'] as int,
+      type: json['type'] as String,
     );
   }
 
@@ -51,8 +51,8 @@ class Achievement {
     String? description,
     String? icon,
     bool? isUnlocked,
-    double? progress,
-    double? targetValue,
+    int? progress,
+    int? targetValue,
     String? type,
   }) {
     return Achievement(

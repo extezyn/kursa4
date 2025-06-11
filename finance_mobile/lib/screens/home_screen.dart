@@ -6,15 +6,13 @@ import '../widgets/expense_list.dart';
 import '../widgets/pie_chart_widget.dart';
 import '../widgets/budget_widget.dart';
 import '../widgets/drawer_menu.dart';
+import '../widgets/add_expense_sheet.dart';
 import '../services/export_service.dart';
-import 'add_expense_screen.dart';
-import 'add_loan_screen.dart';
 import 'analytics_screen.dart';
 import 'settings_screen.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:intl/intl.dart';
 import 'package:excel/excel.dart';
-import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -40,24 +38,43 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     super.dispose();
   }
 
-  void _exportTransactions(BuildContext context) async {
+  void _showAddExpenseSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: const AddExpenseSheet(),
+      ),
+    );
+  }
+
+  Future<void> _exportData(BuildContext context) async {
     try {
       final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
       final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
       
-      await ExportService.exportToCSV(
+      await ExportService.exportData(
         expenseProvider.expenses,
-        categoryProvider.categories,
+        categoryProvider,
+      );
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Экспорт успешно завершен'),
+          duration: Duration(seconds: 2),
+        ),
       );
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Ошибка при экспорте: $e'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Ошибка при экспорте: $e'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
     }
   }
 
@@ -79,8 +96,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.share),
-            onPressed: () => _exportTransactions(context),
+            icon: const Icon(Icons.file_download),
+            onPressed: () => _exportData(context),
+            tooltip: 'Экспорт данных',
           ),
           IconButton(
             icon: const Icon(Icons.bar_chart),
@@ -119,12 +137,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const AddExpenseScreen()),
-          );
-        },
+        onPressed: () => _showAddExpenseSheet(context),
         child: const Icon(Icons.add),
       ),
     );

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../screens/loans_screen.dart';
 
 class DrawerMenu extends StatelessWidget {
   const DrawerMenu({Key? key}) : super(key: key);
@@ -43,16 +42,6 @@ class DrawerMenu extends StatelessWidget {
             title: const Text('Главная'),
             onTap: () {
               Navigator.pushReplacementNamed(context, '/');
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.credit_card),
-            title: const Text('Кредиты'),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const LoansScreen()),
-              );
             },
           ),
           ListTile(

@@ -19,7 +19,7 @@ dependencies:
   fl_chart: ^0.63.0
   excel: ^2.1.0
   uuid: ^4.1.0
-  path_provider: ^2.1.1
+  path_provider: ^2.1.2
   share_plus: ^7.2.1
   package_info_plus: ^4.2.0
   url_launcher: ^6.2.1

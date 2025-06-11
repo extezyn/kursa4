@@ -6,114 +6,133 @@ import 'package:share_plus/share_plus.dart';
 import 'package:intl/intl.dart';
 import '../models/expense.dart';
 import '../models/category.dart';
+import '../providers/category_provider.dart';
 
 class ExportService {
   static final _dateFormat = DateFormat('dd.MM.yyyy');
+  static final _numberFormat = NumberFormat('#,##0.00', 'ru_RU');
 
-  static Future<void> exportToExcel(List<Expense> expenses, List<CategoryModel> categories) async {
+  static Future<void> exportData(List<Expense> expenses, CategoryProvider categoryProvider) async {
+    final directory = await getApplicationDocumentsDirectory();
+    final now = DateTime.now();
+    final timestamp = '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}_${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}';
+    
+    // Создаем Excel файл
+    final excelPath = await _createExcelFile(expenses, categoryProvider, directory, timestamp);
+    
+    // Создаем CSV файл
+    final csvPath = await _createCSVFile(expenses, categoryProvider, directory, timestamp);
+
+    // Делимся обоими файлами
+    if (excelPath != null && csvPath != null) {
+      await Share.shareXFiles(
+        [XFile(excelPath), XFile(csvPath)],
+        subject: 'Экспорт финансов',
+      );
+    }
+  }
+
+  static Future<String?> _createExcelFile(
+    List<Expense> expenses,
+    CategoryProvider categoryProvider,
+    Directory directory,
+    String timestamp,
+  ) async {
     try {
       final excel = Excel.createExcel();
-      final sheet = excel['Расходы'];
+      final Sheet sheet = excel['Транзакции'];
 
       // Добавляем заголовки
       sheet.appendRow([
         'Дата',
+        'Тип',
         'Категория',
         'Сумма',
-        'Тип',
         'Примечание',
       ]);
 
+      // Стиль для заголовков
+      var headerStyle = CellStyle(
+        bold: true,
+        backgroundColorHex: '#CCCCCC',
+        horizontalAlign: HorizontalAlign.Center,
+      );
+
+      // Применяем стиль к заголовкам
+      for (var i = 0; i < 5; i++) {
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: i, rowIndex: 0)).cellStyle = headerStyle;
+      }
+
       // Добавляем данные
       for (var expense in expenses) {
-        final category = categories.firstWhere(
-          (c) => c.id == expense.category,
-          orElse: () => CategoryModel(
-            id: '',
-            name: 'Неизвестная категория',
-            icon: '',
-            color: '#000000',
-          ),
-        );
-
+        final categoryName = categoryProvider.getCategoryName(expense.category);
         sheet.appendRow([
           _dateFormat.format(expense.date),
-          category.name,
-          expense.amount.toString(),
           expense.isIncome ? 'Доход' : 'Расход',
+          categoryName,
+          _numberFormat.format(expense.amount),
           expense.note ?? '',
         ]);
       }
 
-      // Получаем путь к временной директории
-      final directory = await getTemporaryDirectory();
-      final filePath = '${directory.path}/expenses.xlsx';
+      // Автоматическая ширина столбцов
+      for (var i = 0; i < 5; i++) {
+        sheet.setColWidth(i, 20.0);
+      }
 
-      // Сохраняем файл
-      final bytes = excel.encode()!;
-      final file = File(filePath);
-      await file.writeAsBytes(bytes, flush: true);
-
-      // Делимся файлом
-      await Share.shareFiles(
-        [filePath],
-        text: 'Экспорт расходов',
-        subject: 'Экспорт расходов из приложения',
-      );
+      final filePath = '${directory.path}/finance_export_$timestamp.xlsx';
+      final List<int>? fileBytes = excel.save();
+      
+      if (fileBytes != null) {
+        File(filePath)
+          ..createSync(recursive: true)
+          ..writeAsBytesSync(fileBytes);
+        return filePath;
+      }
     } catch (e) {
-      rethrow;
+      print('Ошибка при создании Excel файла: $e');
     }
+    return null;
   }
 
-  static Future<void> exportToCSV(List<Expense> expenses, List<CategoryModel> categories) async {
+  static Future<String?> _createCSVFile(
+    List<Expense> expenses,
+    CategoryProvider categoryProvider,
+    Directory directory,
+    String timestamp,
+  ) async {
     try {
-      final directory = await getTemporaryDirectory();
-      final filePath = '${directory.path}/expenses.csv';
+      final filePath = '${directory.path}/finance_export_$timestamp.csv';
       final file = File(filePath);
-
-      // Создаем CSV с кодировкой UTF-8
       final sink = file.openWrite(encoding: utf8);
 
-      // Добавляем BOM вручную
+      // Добавляем BOM для корректного отображения кириллицы
       sink.add([0xEF, 0xBB, 0xBF]);
 
       // Записываем заголовки
-      sink.writeln('Дата,Категория,Сумма,Тип,Примечание');
+      sink.writeln('Дата,Тип,Категория,Сумма,Примечание');
 
       // Записываем данные
       for (var expense in expenses) {
-        final category = categories.firstWhere(
-          (c) => c.id == expense.category,
-          orElse: () => CategoryModel(
-            id: '',
-            name: 'Неизвестная категория',
-            icon: '',
-            color: '#000000',
-          ),
-        );
-
-        // Экранируем запятые и кавычки в значениях
+        final categoryName = categoryProvider.getCategoryName(expense.category);
         final formattedNote = expense.note?.replaceAll('"', '""') ?? '';
-        final formattedCategory = category.name.replaceAll('"', '""');
-        final formattedDate = _dateFormat.format(expense.date);
-        final formattedAmount = expense.amount.toStringAsFixed(2).replaceAll('.', ',');
-
+        final formattedCategory = categoryName.replaceAll('"', '""');
+        
         sink.writeln(
-          '"$formattedDate","$formattedCategory","$formattedAmount","${expense.isIncome ? 'Доход' : 'Расход'}","$formattedNote"'
+          '"${_dateFormat.format(expense.date)}",' +
+          '"${expense.isIncome ? 'Доход' : 'Расход'}",' +
+          '"$formattedCategory",' +
+          '"${_numberFormat.format(expense.amount)}",' +
+          '"$formattedNote"'
         );
       }
 
       await sink.flush();
       await sink.close();
-
-      // Делимся файлом
-      await Share.shareFiles(
-        [filePath],
-        text: 'Экспорт расходов',
-        subject: 'Экспорт расходов из приложения',
-      );
+      return filePath;
     } catch (e) {
-      rethrow;
+      print('Ошибка при создании CSV файла: $e');
     }
+    return null;
   }
 } 
