@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import '../screens/categories_screen.dart';
+import '../screens/achievements_screen.dart';
+import '../screens/settings_screen.dart';
+import '../screens/loans_screen.dart';
 
 class DrawerMenu extends StatelessWidget {
   const DrawerMenu({Key? key}) : super(key: key);
@@ -9,61 +13,60 @@ class DrawerMenu extends StatelessWidget {
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
-          DrawerHeader(
+          const DrawerHeader(
             decoration: BoxDecoration(
-              color: Theme.of(context).primaryColor,
+              color: Colors.blue,
             ),
-            child: const Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                CircleAvatar(
-                  radius: 30,
-                  backgroundColor: Colors.white,
-                  child: Icon(
-                    Icons.account_balance_wallet,
-                    size: 35,
-                    color: Colors.blue,
-                  ),
-                ),
-                SizedBox(height: 10),
-                Text(
-                  'Финансовый менеджер',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                  ),
-                ),
-              ],
+            child: Text(
+              'Финансовый учёт',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 24,
+              ),
             ),
-          ),
-          ListTile(
-            leading: const Icon(Icons.dashboard),
-            title: const Text('Главная'),
-            onTap: () {
-              Navigator.pushReplacementNamed(context, '/');
-            },
           ),
           ListTile(
             leading: const Icon(Icons.category),
             title: const Text('Категории'),
             onTap: () {
-              Navigator.pushNamed(context, '/categories');
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const CategoriesScreen()),
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.credit_card),
+            title: const Text('Кредиты'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const LoansScreen()),
+              );
             },
           ),
           ListTile(
             leading: const Icon(Icons.emoji_events),
             title: const Text('Достижения'),
             onTap: () {
-              Navigator.pushNamed(context, '/achievements');
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const AchievementsScreen()),
+              );
             },
           ),
-          const Divider(),
           ListTile(
             leading: const Icon(Icons.settings),
             title: const Text('Настройки'),
             onTap: () {
-              Navigator.pushNamed(context, '/settings');
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const SettingsScreen()),
+              );
             },
           ),
         ],

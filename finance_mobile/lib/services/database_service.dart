@@ -23,7 +23,7 @@ class DatabaseService {
 
       return await openDatabase(
         path,
-        version: 1,
+        version: 2,
         onCreate: (db, version) async {
           // Создаем таблицу расходов
           await db.execute('''
@@ -78,12 +78,15 @@ class DatabaseService {
 
           // Создаем таблицу кредитов
           await db.execute('''
-            CREATE TABLE loans (
+            CREATE TABLE IF NOT EXISTS loans (
               id TEXT PRIMARY KEY,
               amount REAL NOT NULL,
+              description TEXT NOT NULL,
+              startDate TEXT NOT NULL,
+              endDate TEXT NOT NULL,
               interestRate REAL NOT NULL,
-              months INTEGER NOT NULL,
-              isAnnuity INTEGER NOT NULL
+              isActive INTEGER NOT NULL DEFAULT 1,
+              isAnnuity INTEGER NOT NULL DEFAULT 1
             )
           ''');
 
@@ -112,20 +115,14 @@ class DatabaseService {
             INSERT INTO achievements (id, name, description, icon, targetValue, type, progress, isUnlocked) VALUES
               ('first_steps', 'Первые шаги', 'Добавьте первую транзакцию', 'edit_note', 1, 'transactions', 0, 0),
               ('first_income', 'Первый доход', 'Добавьте первую запись о доходах', 'payments', 1, 'income', 0, 0),
-              ('first_expense', 'Первый расход', 'Добавьте первую запись о расходах', 'shopping_cart', 1, 'expenses', 0, 0),
-              ('category_creator', 'Создатель категорий', 'Создайте свою первую категорию', 'category', 1, 'categories', 0, 0),
-              ('category_master', 'Мастер категорий', 'Создайте 5 собственных категорий', 'category', 5, 'categories', 0, 0),
-              ('saver_10', 'Накопитель 10%', 'Сэкономьте 10% от месячного дохода', 'savings', 10, 'savings', 0, 0),
-              ('saver_20', 'Накопитель 20%', 'Сэкономьте 20% от месячного дохода', 'savings', 20, 'savings', 0, 0),
-              ('regular_user', 'Постоянный пользователь', 'Используйте приложение 7 дней подряд', 'calendar_today', 7, 'usage', 0, 0),
-              ('transaction_master', 'Мастер учета', 'Создайте 50 записей о расходах и доходах', 'format_list_numbered', 50, 'transactions', 0, 0),
-              ('budget_planner', 'Планировщик бюджета', 'Создайте бюджет на месяц', 'account_balance', 1, 'budget', 0, 0),
-              ('expense_tracker', 'Контроль расходов', 'Отслеживайте расходы 30 дней подряд', 'trending_down', 30, 'tracking', 0, 0),
-              ('income_diversification', 'Диверсификация доходов', 'Добавьте 3 разных источника дохода', 'account_tree', 3, 'income_sources', 0, 0),
-              ('money_saver', 'Большие накопления', 'Накопите 100,000 на счету', 'savings', 100000, 'balance', 0, 0),
-              ('expense_analyzer', 'Аналитик расходов', 'Проанализируйте расходы за месяц', 'analytics', 1, 'analysis', 0, 0),
-              ('budget_master', 'Мастер бюджета', 'Не превышайте бюджет 3 месяца подряд', 'stars', 3, 'budget_streak', 0, 0)
+              ('first_expense', 'Первый расход', 'Добавьте первую запись о расходах', 'shopping_cart', 1, 'expenses', 0, 0)
           ''');
+        },
+        onUpgrade: (db, oldVersion, newVersion) async {
+          if (oldVersion < 2) {
+            // Добавляем поле isAnnuity в таблицу loans
+            await db.execute('ALTER TABLE loans ADD COLUMN isAnnuity INTEGER NOT NULL DEFAULT 1');
+          }
         },
       );
     } catch (e) {
@@ -137,29 +134,14 @@ class DatabaseService {
   static Future<List<Loan>> getLoans() async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query('loans');
-
-    return List.generate(maps.length, (i) {
-      return Loan(
-        id: maps[i]['id'],
-        amount: maps[i]['amount'],
-        interestRate: maps[i]['interestRate'],
-        months: maps[i]['months'],
-        isAnnuity: maps[i]['isAnnuity'] == 1,
-      );
-    });
+    return List.generate(maps.length, (i) => Loan.fromJson(maps[i]));
   }
 
   static Future<void> insertLoan(Loan loan) async {
     final db = await database;
     await db.insert(
       'loans',
-      {
-        'id': loan.id,
-        'amount': loan.amount,
-        'interestRate': loan.interestRate,
-        'months': loan.months,
-        'isAnnuity': loan.isAnnuity ? 1 : 0,
-      },
+      loan.toJson(),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
@@ -168,12 +150,7 @@ class DatabaseService {
     final db = await database;
     await db.update(
       'loans',
-      {
-        'amount': loan.amount,
-        'interestRate': loan.interestRate,
-        'months': loan.months,
-        'isAnnuity': loan.isAnnuity ? 1 : 0,
-      },
+      loan.toJson(),
       where: 'id = ?',
       whereArgs: [loan.id],
     );

@@ -9,21 +9,14 @@ class LoanProvider with ChangeNotifier {
   final _uuid = const Uuid();
 
   List<Loan> get loans => List.unmodifiable(_loans);
+  List<Loan> get activeLoans => _loans.where((loan) => loan.isActive).toList();
 
   Future<void> loadLoans() async {
     _loans = await DatabaseService.getLoans();
     notifyListeners();
   }
 
-  Future<void> addLoan(double amount, double interestRate, int months, bool isAnnuity) async {
-    final loan = Loan(
-      id: _uuid.v4(),
-      amount: amount,
-      interestRate: interestRate,
-      months: months,
-      isAnnuity: isAnnuity,
-    );
-
+  Future<void> addLoan(Loan loan) async {
     await DatabaseService.insertLoan(loan);
     await loadLoans();
   }
@@ -38,8 +31,16 @@ class LoanProvider with ChangeNotifier {
     await loadLoans();
   }
 
-  double get totalLoanAmount {
-    return _loans.fold(0, (sum, loan) => sum + loan.amount);
+  double getTotalLoanAmount() {
+    return activeLoans.fold(0, (sum, loan) => sum + loan.amount);
+  }
+
+  double getTotalInterestAmount() {
+    return activeLoans.fold(0, (sum, loan) {
+      final durationInYears = loan.endDate.difference(loan.startDate).inDays / 365;
+      final interest = loan.amount * (loan.interestRate / 100) * durationInYears;
+      return sum + interest;
+    });
   }
 
   // Расчет ежемесячного платежа для аннуитетного кредита
